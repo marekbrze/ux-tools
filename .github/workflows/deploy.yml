@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true   # auto-create the Pages site (Actions source) on first run
       - uses: actions/upload-pages-artifact@v3
         with:
           # Deploy the repo root so each tool is at .../ux-tools/apps/<name>/
