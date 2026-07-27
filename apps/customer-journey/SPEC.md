@@ -110,4 +110,35 @@ Otworzyć customer journey → edytować **siatkę kroków × slice'ów** (dodaw
 | bazowa / aktualna | `base` / `current` | (Later) CJ oznaczona jako aktualna, od której powstają warianty. |
 
 ## Changes
-<!-- ux-feature / ux-bug append Change entries here -->
+
+### Change 1 — feature: english UI + accessibility + light/dark theme (2026-07-27)
+**Status**: planned — route to ux-build
+
+**User goal**
+Narzędzie ma być **po angielsku** (użycie profesjonalne), **dostępne** (a11y) i **jaśniejsze** — dotychczasowy motyw dark był dla użytkownika zbyt ciemny. Light jako domyślny, dark jako opcja.
+
+**MVP scope**
+- Cały UI po angielsku + `<html lang="en">`.
+- **Light theme domyślnie + dark jako opcja**: przełącznik w headerze; domyślnie podąża za `prefers-color-scheme`; wybór persystowany w `state.theme`.
+- **Aktualizacja design systemu w `CLAUDE.md` (sekcja 2)** na dual palette (light domyślnie + dark) z tokenami jako CSS custom properties — żeby przyszłe apki dziedziczyły light.
+- **Baseline a11y**: semantyczne landmarki (`header`/`main`/`nav`), ikony-akcje jako `<button>` z `aria-label`, ARIA siatki (`role=grid`/`row`/`columnheader`/`rowheader`/`gridcell`), każdy kontrolka osiągalna i operacyjna z klawiatury, **widoczny focus ring**, kontrast interaktywnych ≥ WCAG AA.
+
+**Later (deferred)**
+- Pełna nawigacja strzałkami po komórkach siatki.
+- Ogłaszanie operacji drag&drop dla czytników ekranu (live regions).
+
+**Impact**
+- **Data**: + `state.theme` (`'light' | 'dark' | 'auto'`, default `'auto'`). Pole addytywne — **bez key version bump** (`load()` przez `Object.assign` zostawi default przy braku pola w starych danych). Brak blob-ów → localStorage.
+- **Actions**: `toggleTheme()` / `setTheme(v)` → `save()` + zastosuj `data-theme` na `<html>` (+ nasłuch `prefers-color-scheme` gdy `'auto'`).
+- **Screens**: przycisk przełącznika motywu w headerze (☀ / ☾).
+- **States**: brak nowych; edge: brak zapisanego theme → `'auto'` → resolve przez media query; zmiana system theme na żywo w trybie auto.
+- **Interactions**: keyboard (toggle, focus mgmt); media query `prefers-color-scheme`.
+- **Edge cases**: stary stan bez `theme` → default; kontrast w obu motywach ≥ AA.
+- **Glossary**: `theme` (`light` / `dark` / `auto`).
+
+**Build instructions for ux-build**
+1. **`CLAUDE.md` sekcja 2**: zastąp pojedynczą dark paletę **dualnym systemem** — tokeny jako CSS custom properties; wariant light (domyślny na `:root`) i dark (przez `[data-theme="dark"]`, plus `@media (prefers-color-scheme: dark)` gdy `data-theme="auto"`). Light palette: bg `#f7f8fa`, panele `#ffffff #f1f3f5`, granice `#e5e7eb #d0d7de`, tekst `#1f2328`, wtórny `#57606a`, marginalny `#8c959f`, akcent primary `#2563eb` (hover `#1d4ed8`), danger `#d1242f`. Zachowaj dotychczasowe wartości dark jako wariant dark. Zaktualizuj opisy komponentów (btn, sidebar, panel, drop zone, scrollbar), żeby używały tokenów.
+2. **`index.html`**: wprowadź ten sam system tokenów (CSS vars na `:root` + `[data-theme="dark"]`); `<html lang="en">`; przycisk przełącznika w headerze wołający `toggleTheme()`; boot: zastosuj `state.theme` jako `data-theme` na `<html>` + nasłuch `prefers-color-scheme` dla `'auto'`.
+3. **Angielski (wszystkie stringi)**: header hint, sidebar section headers → *Categories / Personas / Customer journeys*, tooltipy ✎/×/⠿ → *Rename / Remove / Drag*, journey meta → *Title / Persona / Scenario (description) / Expectations*, `+ Etap` → *+ Stage*, `+ krok` → *+ Step*, `+ element` → *+ element*, empty states, export → *Export PNG / ✓ Copied / ✗ Failed*, licznik → *N steps*. Slice labels → **Actions, Touchpoints, Mindset, Emotions, Pain points, Ideas, Insights**. Seeded example: kategoria *Cash loan*, persona *Anna*, CJ *Cash loan application*, etap *Stage 1*, krok *Step 1*.
+4. **a11y**: `<html lang="en">`; semantyczne `header`/`main`/`nav`; ikony-akcje (⠿ ✎ × + ☀/☾) jako `<button aria-label="…">`; ARIA w siatce: `#grid` → `role="grid"`, wiersze → `role="row"`, nagłówki kroków → `role="columnheader"`, etykiety slice'ów → `role="rowheader"`, komórki danych → `role="gridcell"`; widoczny `:focus-visible` ring na wszystkich interaktywnych; zachować Enter/Escape w inline-edycji.
+5. **Glossary w SPEC.md**: dopisz `theme` (`light`/`dark`/`auto`) jeśli go nie ma.
