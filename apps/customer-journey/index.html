@@ -123,7 +123,7 @@
   #persona-list   { border-bottom: 1px solid var(--border-soft); max-height: 26%; }
   #journey-list   { flex: 1; overflow-y: auto; }
 
-  .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: var(--text-3); cursor: pointer; gap: 6px; }
+  .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: var(--text-3); cursor: pointer; gap: 10px; }
   .sb-item:hover { background: var(--cell-hover); color: var(--text-2); }
   .sb-item.active { background: var(--accent-soft); color: var(--text); }
   .sb-item .item-main { flex: 1; min-width: 0; }
@@ -761,7 +761,7 @@ function renderJourneyList() {
     const li = mkSidebarItem({
       name: j.title,
       active: i === state.activeJourney,
-      sub: `${personaName(j.personaId)}${j.description ? ' · ' + j.description : ''}`,
+      sub: [j.personaId != null ? personaName(j.personaId) : null, j.description].filter(Boolean),
       draggable: true,
       card: true,
       onActivate: () => switchJourney(i),
@@ -801,12 +801,13 @@ function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRenam
   nameSpan.textContent = name;
   nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
   main.appendChild(nameSpan);
-  if (sub) {
+  const subs = Array.isArray(sub) ? sub : (sub ? [sub] : []);
+  subs.forEach(s => {
     const subSpan = document.createElement('span');
     subSpan.className = 'item-sub';
-    subSpan.textContent = sub;
+    subSpan.textContent = s;
     main.appendChild(subSpan);
-  }
+  });
 
   const editBtn = document.createElement('button');
   editBtn.type = 'button';
