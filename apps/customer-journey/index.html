@@ -1,16 +1,78 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Journey</title>
 <style>
+  /* ── Theme tokens ── */
+  :root {
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --panel-2: #f1f3f5;
+    --panel-3: #eaecef;
+    --inset: #ffffff;
+    --border: #d0d7de;
+    --border-soft: #e5e7eb;
+    --text: #1f2328;
+    --text-2: #57606a;
+    --text-3: #6e7781;
+    --text-4: #8c959f;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-contrast: #ffffff;
+    --accent-soft: rgba(37,99,235,0.12);
+    --accent-soft-text: #2563eb;
+    --danger: #d1242f;
+    --danger-soft: rgba(209,36,47,0.10);
+    --chip: #eaecef;
+    --chip-text: #57606a;
+    --cell: #ffffff;
+    --cell-hover: #f6f8fa;
+    --element-bg: #f6f8fa;
+    --element-border: #e1e4e8;
+    --element-hover-bg: #eef0f2;
+    --scrollbar: #c8d0d8;
+    --shadow: 0 1px 2px rgba(31,35,40,0.06);
+  }
+  [data-theme="dark"] {
+    --bg: #111;
+    --panel: #141414;
+    --panel-2: #161616;
+    --panel-3: #1a1a1a;
+    --inset: #1a1a1a;
+    --border: #2a2a2a;
+    --border-soft: #1e1e1e;
+    --text: #e0e0e0;
+    --text-2: #999;
+    --text-3: #777;
+    --text-4: #555;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-contrast: #fff;
+    --accent-soft: rgba(59,130,246,0.10);
+    --accent-soft-text: #60a5fa;
+    --danger: #f43f5e;
+    --danger-soft: rgba(244,63,94,0.10);
+    --chip: #2a2a2a;
+    --chip-text: #888;
+    --cell: #111;
+    --cell-hover: #161616;
+    --element-bg: #1a1a1a;
+    --element-border: #262626;
+    --element-hover-bg: #1e1e1e;
+    --scrollbar: #2a2a2a;
+    --shadow: none;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  button { font: inherit; color: inherit; background: transparent; border: none; }
+  button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #111;
-    color: #e0e0e0;
+    background: var(--bg);
+    color: var(--text);
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -19,23 +81,21 @@
 
   /* ── Header ── */
   header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: flex; align-items: center; gap: 12px;
     padding: 10px 16px;
-    background: #1a1a1a;
-    border-bottom: 1px solid #2a2a2a;
+    background: var(--panel-3);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  header h1 { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.02em; }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: 0.02em; }
   header .spacer { flex: 1; }
-  .hint { font-size: 12px; color: #666; }
+  .hint { font-size: 12px; color: var(--text-3); }
 
-  .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.15s; }
-  .btn-primary { background: #3b82f6; color: #fff; }
-  .btn-primary:hover { background: #2563eb; }
-  .btn-ghost { background: transparent; color: #999; border: 1px solid #333; }
-  .btn-ghost:hover { background: #222; color: #ccc; }
+  .btn { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.15s, border-color 0.15s; }
+  .btn-primary { background: var(--accent); color: var(--accent-contrast); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { color: var(--text-2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--panel-2); color: var(--text); }
   .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -44,214 +104,213 @@
 
   /* ── Sidebar ── */
   #sidebar {
-    width: 220px;
-    flex-shrink: 0;
-    background: #141414;
-    border-right: 1px solid #222;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    width: 220px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
   }
   .sidebar-section-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 8px 10px 6px;
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
-    color: #444; flex-shrink: 0;
+    color: var(--text-4); flex-shrink: 0;
   }
-  .sidebar-section-header .btn-add { background: transparent; border: none; color: #555; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; border-radius: 3px; }
-  .sidebar-section-header .btn-add:hover { color: #aaa; background: #222; }
+  .sidebar-section-header .btn-add { cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; border-radius: 3px; color: var(--text-4); }
+  .sidebar-section-header .btn-add:hover { color: var(--text-2); background: var(--panel-2); }
 
   .sb-list { list-style: none; overflow-y: auto; flex-shrink: 0; }
-  #category-list { border-bottom: 1px solid #1e1e1e; max-height: 32%; }
-  #persona-list   { border-bottom: 1px solid #1e1e1e; max-height: 26%; }
+  #category-list { border-bottom: 1px solid var(--border-soft); max-height: 32%; }
+  #persona-list   { border-bottom: 1px solid var(--border-soft); max-height: 26%; }
   #journey-list   { flex: 1; overflow-y: auto; }
 
-  .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: #777; cursor: pointer; gap: 6px; }
-  .sb-item:hover { background: #1c1c1c; color: #ccc; }
-  .sb-item.active { background: #1e2a3a; color: #e0e0e0; }
+  .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: var(--text-3); cursor: pointer; gap: 6px; }
+  .sb-item:hover { background: var(--cell-hover); color: var(--text-2); }
+  .sb-item.active { background: var(--accent-soft); color: var(--text); }
   .sb-item .item-main { flex: 1; min-width: 0; }
   .sb-item .item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sb-item .item-sub { font-size: 10.5px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
-  .sb-item .item-count { background: #2a2a2a; border-radius: 10px; padding: 0 6px; font-size: 10px; color: #888; margin-left: 4px; flex-shrink: 0; }
-  .sb-item input.rename-input { width: 100%; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; }
+  .sb-item .item-sub { font-size: 10.5px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .sb-item .item-count { background: var(--chip); border-radius: 10px; padding: 0 6px; font-size: 10px; color: var(--chip-text); margin-left: 4px; flex-shrink: 0; }
+  .sb-item input.rename-input { width: 100%; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 12px; padding: 1px 4px; outline: none; }
 
-  .sb-item .item-edit, .sb-item .item-remove, .sb-item .drag-handle {
-    opacity: 0; color: #555; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 2px 3px; border-radius: 3px; font-size: 11px; user-select: none;
+  .sb-item .item-edit, .sb-item .item-remove {
+    opacity: 0; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 2px 3px; border-radius: 3px; font-size: 11px; user-select: none;
   }
+  .sb-item .drag-handle { opacity: 0; color: var(--text-4); flex-shrink: 0; line-height: 1; padding: 2px 3px; border-radius: 3px; font-size: 11px; user-select: none; cursor: grab; }
   .sb-item:hover .item-edit, .sb-item:hover .item-remove, .sb-item:hover .drag-handle { opacity: 1; }
-  .sb-item .item-edit:hover { color: #60a5fa; background: #1a243a; }
-  .sb-item .item-remove:hover { color: #f43f5e; background: #2a1a1e; }
-  .sb-item .drag-handle { color: #444; cursor: grab; }
+  .sb-item .item-edit:hover { color: var(--accent-soft-text); background: var(--accent-soft); }
+  .sb-item .item-remove:hover { color: var(--danger); background: var(--danger-soft); }
   .sb-item.dragging { opacity: 0.35; }
-  .sb-item.drag-over-above { border-top: 2px solid #3b82f6; }
-  .sb-item.drag-over-below { border-bottom: 2px solid #3b82f6; }
+  .sb-item.drag-over-above { border-top: 2px solid var(--accent); }
+  .sb-item.drag-over-below { border-bottom: 2px solid var(--accent); }
 
   /* Sidebar resize handle */
-  #sidebar-resizer { width: 4px; flex-shrink: 0; background: #222; cursor: ew-resize; transition: background 0.15s; }
-  #sidebar-resizer:hover, #sidebar-resizer.resizing { background: #3b82f6; }
+  #sidebar-resizer { width: 4px; flex-shrink: 0; background: var(--border); cursor: ew-resize; transition: background 0.15s; }
+  #sidebar-resizer:hover, #sidebar-resizer.resizing { background: var(--accent); }
 
   /* Scrollbars */
   .sb-list::-webkit-scrollbar, #grid-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
   .sb-list::-webkit-scrollbar-track, #grid-scroll::-webkit-scrollbar-track { background: transparent; }
-  .sb-list::-webkit-scrollbar-thumb, #grid-scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+  .sb-list::-webkit-scrollbar-thumb, #grid-scroll::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
 
   /* ── Main panel ── */
   .panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .panel-header {
     padding: 8px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #555; background: #161616; border-bottom: 1px solid #222; flex-shrink: 0;
+    color: var(--text-4); background: var(--panel-2); border-bottom: 1px solid var(--border); flex-shrink: 0;
     display: flex; align-items: center; gap: 8px;
   }
-  .panel-header .count { background: #2a2a2a; border-radius: 10px; padding: 1px 7px; font-size: 11px; color: #888; text-transform: none; }
+  .panel-header .count { background: var(--chip); border-radius: 10px; padding: 1px 7px; font-size: 11px; color: var(--chip-text); text-transform: none; }
 
   /* Journey metadata bar */
-  #journey-meta { padding: 10px 14px; background: #141414; border-bottom: 1px solid #222; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+  #journey-meta { padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
   #journey-meta .meta-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  #journey-meta .title-input { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 5px; color: #fff; font-size: 14px; font-weight: 600; padding: 5px 9px; outline: none; flex: 1; min-width: 180px; }
-  #journey-meta .title-input:focus { border-color: #3b82f6; }
+  #journey-meta .title-input { background: var(--inset); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 14px; font-weight: 600; padding: 5px 9px; outline: none; flex: 1; min-width: 180px; }
+  #journey-meta .title-input:focus { border-color: var(--accent); }
   #journey-meta select, #journey-meta .field-input {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 5px; color: #ccc; font-size: 12px; padding: 4px 8px; outline: none;
+    background: var(--inset); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 12px; padding: 4px 8px; outline: none;
   }
-  #journey-meta select:focus, #journey-meta .field-input:focus { border-color: #3b82f6; }
+  #journey-meta select:focus, #journey-meta .field-input:focus { border-color: var(--accent); }
   #journey-meta .field-input { flex: 1; min-width: 160px; }
-  #journey-meta .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #555; }
+  #journey-meta .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-4); }
 
   /* ── Grid ── */
-  #grid-scroll { flex: 1; overflow: auto; padding: 0; background: #111; }
-
+  #grid-scroll { flex: 1; overflow: auto; padding: 0; background: var(--bg); }
   #grid { display: grid; align-content: start; }
+  .grow { display: contents; }
 
-  .g-corner { background: #161616; position: sticky; left: 0; z-index: 4; border-right: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; }
-  .g-corner.row-step { display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #444; }
+  .g-corner { background: var(--panel-2); position: sticky; left: 0; z-index: 4; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .g-corner.row-step { display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-4); }
 
   /* Stage header cell (spans its steps) */
   .g-stage {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-bottom: none;
+    background: var(--panel-3); border: 1px solid var(--border); border-bottom: none;
     display: flex; align-items: center; gap: 6px; padding: 4px 8px; min-height: 30px;
   }
-  .g-stage .drag-handle { color: #444; cursor: grab; font-size: 12px; user-select: none; }
-  .g-stage:hover .drag-handle { color: #777; }
-  .g-stage .stage-name { font-size: 12px; font-weight: 600; color: #ccc; flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; }
-  .g-stage .stage-name:hover { background: #222; }
-  .g-stage input.rename-input { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; }
-  .g-stage .stage-add-step { background: transparent; border: none; color: #555; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; }
-  .g-stage .stage-add-step:hover { color: #60a5fa; background: #1a243a; }
+  .g-stage .drag-handle { color: var(--text-4); cursor: grab; font-size: 12px; user-select: none; }
+  .g-stage:hover .drag-handle { color: var(--text-3); }
+  .g-stage .stage-name { font-size: 12px; font-weight: 600; color: var(--text-2); flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; }
+  .g-stage .stage-name:hover { background: var(--panel-2); }
+  .g-stage input.rename-input { flex: 1; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 12px; padding: 1px 4px; outline: none; }
+  .g-stage .stage-add-step { cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; color: var(--text-4); }
+  .g-stage .stage-add-step:hover { color: var(--accent-soft-text); background: var(--accent-soft); }
   .g-stage.dragging { opacity: 0.4; }
-  .g-stage.drop-before { box-shadow: inset 3px 0 0 #3b82f6; }
-  .g-stage.drop-after  { box-shadow: inset -3px 0 0 #3b82f6; }
+  .g-stage.drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+  .g-stage.drop-after  { box-shadow: inset -3px 0 0 var(--accent); }
 
   /* Step header cell */
   .g-step {
-    background: #141414; border: 1px solid #2a2a2a; border-bottom: none;
-    display: flex; align-items: center; gap: 4px; padding: 4px 6px; min-height: 34px;
-    cursor: grab;
+    background: var(--panel); border: 1px solid var(--border); border-bottom: none;
+    display: flex; align-items: center; gap: 4px; padding: 4px 6px; min-height: 34px; cursor: grab;
   }
-  .g-step .step-name { font-size: 12px; color: #999; flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .g-step .step-name:hover { background: #222; color: #e0e0e0; }
-  .g-step input.rename-input { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; min-width: 0; }
-  .g-step .step-remove { opacity: 0; color: #555; cursor: pointer; font-size: 12px; padding: 0 3px; border-radius: 3px; }
+  .g-step .step-name { font-size: 12px; color: var(--text-2); flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-step .step-name:hover { background: var(--panel-2); color: var(--text); }
+  .g-step input.rename-input { flex: 1; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 12px; padding: 1px 4px; outline: none; min-width: 0; }
+  .g-step .step-remove { opacity: 0; cursor: pointer; font-size: 12px; padding: 0 3px; border-radius: 3px; color: var(--text-4); }
   .g-step:hover .step-remove { opacity: 1; }
-  .g-step .step-remove:hover { color: #f43f5e; background: #2a1a1e; }
+  .g-step .step-remove:hover { color: var(--danger); background: var(--danger-soft); }
   .g-step.dragging { opacity: 0.35; }
-  .g-step.drop-before { box-shadow: inset 3px 0 0 #3b82f6; }
-  .g-step.drop-after  { box-shadow: inset -3px 0 0 #3b82f6; }
+  .g-step.drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+  .g-step.drop-after  { box-shadow: inset -3px 0 0 var(--accent); }
 
   /* Slice label cell (sticky left) */
   .g-slice-label {
-    background: #161616; position: sticky; left: 0; z-index: 3;
-    border-right: 1px solid #2a2a2a; border-bottom: 1px solid #222;
+    background: var(--panel-2); position: sticky; left: 0; z-index: 3;
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border-soft);
     display: flex; align-items: center; padding: 0 12px;
-    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #777;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3);
   }
 
   /* Data cell */
   .g-cell {
-    background: #111; border-right: 1px solid #1e1e1e; border-bottom: 1px solid #1e1e1e;
-    padding: 6px 7px; min-height: 56px; display: flex; flex-direction: column; gap: 4px;
-    position: relative;
+    background: var(--cell); border-right: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft);
+    padding: 6px 7px; min-height: 56px; display: flex; flex-direction: column; gap: 4px; position: relative;
   }
-  .g-cell:hover { background: #161616; }
+  .g-cell:hover { background: var(--cell-hover); }
   .g-cell .element {
     display: flex; align-items: flex-start; gap: 4px;
-    background: #1a1a1a; border: 1px solid #262626; border-radius: 4px; padding: 3px 5px;
+    background: var(--element-bg); border: 1px solid var(--element-border); border-radius: 4px; padding: 3px 5px;
   }
-  .g-cell .element:hover { border-color: #333; background: #1e1e1e; }
-  .g-cell .element .el-text { flex: 1; font-size: 11.5px; color: #ccc; line-height: 1.35; cursor: text; word-break: break-word; white-space: pre-wrap; }
-  .g-cell .element .el-text:empty::before { content: '…'; color: #444; }
-  .g-cell .element input.el-edit { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 11.5px; padding: 1px 4px; outline: none; }
-  .g-cell .element .el-handle { color: #444; cursor: grab; font-size: 10px; line-height: 1.4; user-select: none; opacity: 0; }
+  .g-cell .element:hover { border-color: var(--border); background: var(--element-hover-bg); }
+  .g-cell .element .el-text { flex: 1; font-size: 11.5px; color: var(--text-2); line-height: 1.35; cursor: text; word-break: break-word; white-space: pre-wrap; }
+  .g-cell .element .el-text:empty::before { content: '…'; color: var(--text-4); }
+  .g-cell .element input.el-edit { flex: 1; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 11.5px; padding: 1px 4px; outline: none; }
+  .g-cell .element .el-handle { color: var(--text-4); cursor: grab; font-size: 10px; line-height: 1.4; user-select: none; opacity: 0; }
   .g-cell .element:hover .el-handle { opacity: 1; }
-  .g-cell .element .el-remove { color: #555; cursor: pointer; font-size: 11px; line-height: 1.4; opacity: 0; }
+  .g-cell .element .el-remove { color: var(--text-4); cursor: pointer; font-size: 11px; line-height: 1.4; opacity: 0; }
   .g-cell .element:hover .el-remove { opacity: 1; }
-  .g-cell .element .el-remove:hover { color: #f43f5e; }
+  .g-cell .element .el-remove:hover { color: var(--danger); }
   .g-cell .element.dragging { opacity: 0.35; }
-  .g-cell .add-element { align-self: flex-start; background: transparent; border: 1px dashed #2a2a2a; border-radius: 4px; color: #555; cursor: pointer; font-size: 11px; padding: 2px 7px; }
-  .g-cell .add-element:hover { border-color: #3b82f6; color: #60a5fa; }
+  .g-cell .add-element { align-self: flex-start; border: 1px dashed var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 7px; color: var(--text-4); }
+  .g-cell .add-element:hover { border-color: var(--accent); color: var(--accent-soft-text); }
 
   /* Emotion cell */
   .g-cell.emotion-cell { justify-content: center; }
   .emo-dots { display: flex; gap: 5px; align-items: center; justify-content: center; }
-  .emo-dot { width: 14px; height: 14px; border-radius: 50%; background: #262626; cursor: pointer; border: 1px solid #333; }
-  .emo-dot.on { background: var(--emo, #3b82f6); border-color: var(--emo, #3b82f6); }
-  .emo-clear { font-size: 10px; color: #555; cursor: pointer; margin-left: 6px; }
-  .emo-clear:hover { color: #f43f5e; }
+  .emo-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--chip); cursor: pointer; border: 1px solid var(--border); padding: 0; }
+  .emo-dot.on { background: var(--emo, var(--accent)); border-color: var(--emo, var(--accent)); }
+  .emo-clear { font-size: 10px; color: var(--text-4); cursor: pointer; margin-left: 6px; }
+  .emo-clear:hover { color: var(--danger); }
 
   /* Empty states */
-  .empty-state { border: 2px dashed #2a2a2a; border-radius: 12px; padding: 50px 40px; text-align: center; margin: 24px; }
-  .empty-state p { font-size: 14px; color: #555; margin-bottom: 6px; }
-  .empty-state small { font-size: 12px; color: #3a3a3a; }
+  .empty-state { border: 2px dashed var(--border); border-radius: 12px; padding: 50px 40px; text-align: center; margin: 24px; }
+  .empty-state p { font-size: 14px; color: var(--text-3); margin-bottom: 6px; }
+  .empty-state small { font-size: 12px; color: var(--text-4); }
   .empty-state .btn { margin-top: 14px; }
 
-  .sb-empty { padding: 10px 12px; font-size: 11px; color: #3a3a3a; }
+  .sb-empty { padding: 10px 12px; font-size: 11px; color: var(--text-4); }
+
+  /* storage error toast */
+  #storage-error { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 10px 16px; font-size: 12px; z-index: 9999; max-width: 90vw; text-align: center; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Customer Journey</h1>
-  <span class="hint">Mapa podróży klienta · siatka etapów/kroków × slice'ów</span>
+  <span class="hint">Customer journey map · stages / steps × slices</span>
   <span class="spacer"></span>
-  <button class="btn btn-primary btn-sm" id="btn-export">↓ Eksport PNG</button>
+  <button class="btn btn-ghost btn-sm" id="btn-theme" aria-label="Switch theme" title="Switch theme">☀</button>
+  <button class="btn btn-primary btn-sm" id="btn-export">↓ Export PNG</button>
 </header>
 
 <main>
   <!-- SIDEBAR -->
-  <div id="sidebar">
+  <aside id="sidebar" aria-label="Library">
     <div class="sidebar-section-header">
-      Kategorie
-      <button class="btn-add" id="btn-add-category" title="Nowa kategoria">+</button>
+      Categories
+      <button class="btn-add" id="btn-add-category" aria-label="New category" title="New category">+</button>
     </div>
     <ul id="category-list" class="sb-list"></ul>
 
     <div class="sidebar-section-header">
-      Persony
-      <button class="btn-add" id="btn-add-persona" title="Nowa persona">+</button>
+      Personas
+      <button class="btn-add" id="btn-add-persona" aria-label="New persona" title="New persona">+</button>
     </div>
     <ul id="persona-list" class="sb-list"></ul>
 
     <div class="sidebar-section-header">
       Customer journeys
-      <button class="btn-add" id="btn-add-journey" title="Nowa CJ">+</button>
+      <button class="btn-add" id="btn-add-journey" aria-label="New journey" title="New journey">+</button>
     </div>
     <ul id="journey-list" class="sb-list"></ul>
-  </div>
+  </aside>
 
-  <div id="sidebar-resizer"></div>
+  <div id="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize library"></div>
 
   <!-- MAIN PANEL -->
   <div class="panel">
     <div class="panel-header">
       <span id="panel-title">Customer journey</span>
-      <span class="count" id="step-count">0 kroków</span>
+      <span class="count" id="step-count">0 steps</span>
     </div>
     <div id="journey-meta" style="display:none"></div>
     <div id="grid-scroll">
       <div id="grid-empty" class="empty-state" style="display:none">
-        <p>Brak customer journey</p>
-        <small>Dodaj kategorię i pierwszą CJ, żeby zacząć mapować.</small>
-        <div><button class="btn btn-primary btn-sm" id="btn-empty-add">Dodaj customer journey</button></div>
+        <p>No customer journey</p>
+        <small>Add a category and your first journey to start mapping.</small>
+        <div><button class="btn btn-primary btn-sm" id="btn-empty-add">Add customer journey</button></div>
       </div>
-      <div id="grid"></div>
+      <div id="grid" role="grid" aria-label="Customer journey grid"></div>
     </div>
   </div>
 </main>
@@ -263,13 +322,13 @@ const LABEL_COL_W = 150;
 const STEP_COL_W  = 220;
 
 const SLICES = [
-  { key: 'action',     label: 'Działania klienta' },
-  { key: 'touchpoint', label: 'Touchpointy' },
-  { key: 'mindset',    label: 'Myśli / pytania' },
-  { key: 'emotion',    label: 'Emocje' },
+  { key: 'action',     label: 'Actions' },
+  { key: 'touchpoint', label: 'Touchpoints' },
+  { key: 'mindset',    label: 'Mindset' },
+  { key: 'emotion',    label: 'Emotions' },
   { key: 'pain-point', label: 'Pain points' },
-  { key: 'idea',       label: 'Pomysły' },
-  { key: 'insight',    label: 'Insighty' },
+  { key: 'idea',       label: 'Ideas' },
+  { key: 'insight',    label: 'Insights' },
 ];
 const EMOTION_KEY = 'emotion';
 const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1..5 low→high
@@ -281,6 +340,7 @@ const state = {
   activeCategory: 0,
   activeJourney: 0,
   sidebarWidth: 220,
+  theme: 'light',   // 'light' | 'dark' | 'auto'
   nextId: 1,
 };
 
@@ -292,9 +352,9 @@ function freshCells() {
   return c;
 }
 function newStep(name) { return { id: uid(), name, cells: freshCells() }; }
-function newStage(name) { return { id: uid(), name, steps: [newStep('Krok 1')] }; }
+function newStage(name) { return { id: uid(), name, steps: [newStep('Step 1')] }; }
 function newJourney(title, personaId) {
-  return { id: uid(), personaId: personaId ?? null, title, description: '', expectations: '', stages: [newStage('Etap 1')] };
+  return { id: uid(), personaId: personaId ?? null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
 }
 function newCategory(name) { return { id: uid(), name, journeys: [] }; }
 function newPersona(name) { return { id: uid(), name }; }
@@ -328,6 +388,40 @@ function findStep(stepId) {
   return null;
 }
 
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const THEME_ORDER = ['light', 'dark', 'auto'];
+const THEME_ICON = { light: '☀', dark: '☾', auto: '◐' };
+const THEME_LABEL = { light: 'Light theme', dark: 'Dark theme', auto: 'Auto (follow system)' };
+let _mqListener = null;
+
+function resolveTheme() {
+  if (state.theme === 'auto') {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return state.theme;
+}
+function applyTheme() {
+  const resolved = resolveTheme();
+  document.documentElement.setAttribute('data-theme', resolved);
+  const btn = document.getElementById('btn-theme');
+  if (btn) {
+    btn.textContent = THEME_ICON[state.theme] || '☀';
+    btn.setAttribute('aria-label', THEME_LABEL[state.theme]);
+    btn.title = THEME_LABEL[state.theme];
+  }
+  // react to system changes only in auto
+  if (_mqListener) { window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', _mqListener); _mqListener = null; }
+  if (state.theme === 'auto' && window.matchMedia) {
+    _mqListener = () => applyTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', _mqListener);
+  }
+}
+function toggleTheme() {
+  const idx = THEME_ORDER.indexOf(state.theme);
+  state.theme = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
+  save(); applyTheme();
+}
+
 // ─── Persistence ──────────────────────────────────────────────────────────────
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -340,6 +434,7 @@ function load() {
   try {
     const parsed = JSON.parse(raw);
     Object.assign(state, parsed);
+    if (!state.theme) state.theme = 'light';
     // normalize any missing cells/slices on loaded data
     state.categories.forEach(cat => cat.journeys.forEach(j => j.stages.forEach(st => st.steps.forEach(step => {
       const c = step.cells || (step.cells = {});
@@ -351,13 +446,8 @@ function load() {
 let _storageErrTimer = null;
 function showStorageError() {
   let el = document.getElementById('storage-error');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'storage-error';
-    el.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#2a1a1e;color:#fda4af;border:1px solid #5b2230;border-radius:8px;padding:10px 16px;font-size:12px;z-index:9999;max-width:90vw;text-align:center';
-    document.body.appendChild(el);
-  }
-  el.textContent = 'Nie udało się zapisać — prawdopodobnie pełny localStorage. Usuń niepotrzebne dane.';
+  if (!el) { el = document.createElement('div'); el.id = 'storage-error'; document.body.appendChild(el); }
+  el.textContent = "Couldn't save — localStorage may be full. Try removing unused data.";
   clearTimeout(_storageErrTimer);
   _storageErrTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
   el.style.display = '';
@@ -365,7 +455,7 @@ function showStorageError() {
 
 // ─── Category CRUD ────────────────────────────────────────────────────────────
 function createCategory(name) {
-  const cat = newCategory(name || `Kategoria ${state.categories.length + 1}`);
+  const cat = newCategory(name || `Category ${state.categories.length + 1}`);
   state.categories.push(cat);
   state.activeCategory = state.categories.length - 1;
   state.activeJourney = 0;
@@ -375,7 +465,7 @@ function createCategory(name) {
 function switchCategory(i) { state.activeCategory = i; state.activeJourney = 0; save(); render(); }
 function renameCategory(i, name) {
   const cat = state.categories[i]; if (!cat) return;
-  cat.name = name.trim() || `Kategoria ${i + 1}`;
+  cat.name = name.trim() || `Category ${i + 1}`;
   save(); renderCategoryList();
 }
 function removeCategory(i) {
@@ -404,9 +494,7 @@ function renamePersona(i, name) {
   save(); renderPersonaList(); renderJourneyMeta();
 }
 function removePersona(i) {
-  const pid = state.personas[i]?.id;
   state.personas.splice(i, 1);
-  // journeys referencing it just render as '—' (no blocking)
   save(); render();
 }
 function movePersona(from, to) {
@@ -421,7 +509,7 @@ function createJourney(title) {
   let cat = currentCategory();
   if (!cat) { createCategory('Cash loan'); cat = currentCategory(); }
   const personaId = state.personas[0]?.id ?? null;
-  cat.journeys.push(newJourney(title || `CJ ${cat.journeys.length + 1}`, personaId));
+  cat.journeys.push(newJourney(title || `Journey ${cat.journeys.length + 1}`, personaId));
   state.activeJourney = cat.journeys.length - 1;
   _pendingRename = 'journey';
   save(); render();
@@ -450,21 +538,21 @@ function setJourneyField(field, value) {
 // ─── Stage CRUD ───────────────────────────────────────────────────────────────
 function addStage() {
   const j = currentJourney(); if (!j) return;
-  const st = newStage(`Etap ${j.stages.length + 1}`);
+  const st = newStage(`Stage ${j.stages.length + 1}`);
   j.stages.push(st);
   _pendingStageRename = st.id;
   save(); renderGrid();
 }
 function renameStage(stageId, name) {
   const r = findStage(stageId); if (!r) return;
-  r.stage.name = name.trim() || `Etap ${r.stageIndex + 1}`;
+  r.stage.name = name.trim() || `Stage ${r.stageIndex + 1}`;
   save(); renderGrid();
 }
 function removeStage(stageId) {
   const j = currentJourney(); if (!j) return;
   const idx = j.stages.findIndex(s => s.id === stageId); if (idx < 0) return;
   j.stages.splice(idx, 1);
-  if (j.stages.length === 0) j.stages.push(newStage('Etap 1'));
+  if (j.stages.length === 0) j.stages.push(newStage('Stage 1'));
   save(); renderGrid();
 }
 function moveStage(from, to) {
@@ -478,23 +566,22 @@ function moveStage(from, to) {
 // ─── Step CRUD ────────────────────────────────────────────────────────────────
 function addStep(stageId) {
   const r = findStage(stageId); if (!r) return;
-  const step = newStep(`Krok ${r.stage.steps.length + 1}`);
+  const step = newStep(`Step ${r.stage.steps.length + 1}`);
   r.stage.steps.push(step);
   _pendingStepRename = step.id;
   save(); renderGrid();
 }
 function renameStep(stepId, name) {
   const r = findStep(stepId); if (!r) return;
-  r.step.name = name.trim() || `Krok ${r.stepIndex + 1}`;
+  r.step.name = name.trim() || `Step ${r.stepIndex + 1}`;
   save(); renderGrid();
 }
 function removeStep(stepId) {
   const r = findStep(stepId); if (!r) return;
   r.stage.steps.splice(r.stepIndex, 1);
-  if (r.stage.steps.length === 0) r.stage.steps.push(newStep('Krok 1'));
+  if (r.stage.steps.length === 0) r.stage.steps.push(newStep('Step 1'));
   save(); renderGrid();
 }
-// Move a step (origin stage + index) to (targetStageId, targetIndex)
 function moveStep(fromStageId, fromIndex, toStageId, toIndex) {
   const j = currentJourney(); if (!j) return;
   const fromStage = j.stages.find(s => s.id === fromStageId);
@@ -502,7 +589,6 @@ function moveStep(fromStageId, fromIndex, toStageId, toIndex) {
   if (!fromStage || !toStage) return;
   if (fromIndex < 0 || fromIndex >= fromStage.steps.length) return;
   const [step] = fromStage.steps.splice(fromIndex, 1);
-  // adjust target index if removing shifted it in same stage
   let ti = toIndex;
   if (fromStage === toStage && fromIndex < ti) ti--;
   ti = Math.max(0, Math.min(ti, toStage.steps.length));
@@ -578,7 +664,6 @@ function startEdit(spanEl, current, onCommit) {
   input.addEventListener('blur', commit);
 }
 
-// element text editor (textarea-like single input)
 function startElementEdit(textSpan, stepId, slice, elementId, current) {
   const input = document.createElement('input');
   input.className = 'el-edit';
@@ -588,7 +673,7 @@ function startElementEdit(textSpan, stepId, slice, elementId, current) {
   let done = false;
   const finish = (val) => {
     if (done) return; done = true;
-    if (val.trim() === '') { removeElement(stepId, slice, elementId); }   // empty → remove (re-renders)
+    if (val.trim() === '') { removeElement(stepId, slice, elementId); }
     else { updateElement(stepId, slice, elementId, val); renderGrid(); }
   };
   input.addEventListener('keydown', e => {
@@ -599,10 +684,10 @@ function startElementEdit(textSpan, stepId, slice, elementId, current) {
 }
 
 // ─── Pending edit flags (focus after re-render) ───────────────────────────────
-let _pendingRename = null;        // 'category' | 'persona' | 'journey'
-let _pendingStageRename = null;   // stageId
-let _pendingStepRename = null;    // stepId
-let _pendingElementEdit = null;   // {stepId, slice, elementId}
+let _pendingRename = null;
+let _pendingStageRename = null;
+let _pendingStepRename = null;
+let _pendingElementEdit = null;
 
 // ─── Render coordinator ───────────────────────────────────────────────────────
 function render() {
@@ -619,7 +704,7 @@ function renderCategoryList() {
     const li = mkSidebarItem({
       name: cat.name,
       active: i === state.activeCategory,
-      sub: `${cat.journeys.length} CJ`,
+      sub: `${cat.journeys.length} journeys`,
       draggable: true,
       onActivate: () => switchCategory(i),
       onRename: v => renameCategory(i, v),
@@ -629,7 +714,7 @@ function renderCategoryList() {
     });
     categoryList.appendChild(li);
   });
-  if (state.categories.length === 0) categoryList.innerHTML = '<li class="sb-empty">Brak kategorii — dodaj pierwszą (+).</li>';
+  if (state.categories.length === 0) categoryList.innerHTML = '<li class="sb-empty">No categories — add one (+).</li>';
   applyPendingRename('category', categoryList, state.activeCategory, v => renameCategory(state.activeCategory, v));
 }
 
@@ -649,7 +734,7 @@ function renderPersonaList() {
     });
     personaList.appendChild(li);
   });
-  if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">Brak person — dodaj (+).</li>';
+  if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">No personas — add one (+).</li>';
 }
 
 // ─── Sidebar: journeys ────────────────────────────────────────────────────────
@@ -657,7 +742,7 @@ function renderJourneyList() {
   journeyList.innerHTML = '';
   const cat = currentCategory();
   if (!cat || cat.journeys.length === 0) {
-    journeyList.innerHTML = '<li class="sb-empty">Brak CJ w tej kategorii — dodaj (+).</li>';
+    journeyList.innerHTML = '<li class="sb-empty">No journeys in this category — add one (+).</li>';
     return;
   }
   cat.journeys.forEach((j, i) => {
@@ -679,12 +764,12 @@ function renderJourneyList() {
 function renameJourneyInline(i, v) {
   const cat = currentCategory(); if (!cat) return;
   const j = cat.journeys[i]; if (!j) return;
-  j.title = v.trim() || `CJ ${i + 1}`;
+  j.title = v.trim() || `Journey ${i + 1}`;
   save(); renderJourneyList(); renderJourneyMeta();
 }
 function renderSidebarJourneyTitle() { renderJourneyList(); }
 
-// generic sidebar item builder (mirrors image-slicer)
+// generic sidebar item builder
 function mkSidebarItem({ name, active, sub, draggable, onActivate, onRename, onRemove, onMove, dragKind }) {
   const li = document.createElement('li');
   li.className = 'sb-item' + (active ? ' active' : '');
@@ -693,6 +778,7 @@ function mkSidebarItem({ name, active, sub, draggable, onActivate, onRename, onR
   const handle = document.createElement('span');
   handle.className = 'drag-handle';
   handle.textContent = '⠿';
+  handle.setAttribute('aria-hidden', 'true');
   handle.addEventListener('mousedown', e => e.stopPropagation());
 
   const main = document.createElement('div');
@@ -709,16 +795,20 @@ function mkSidebarItem({ name, active, sub, draggable, onActivate, onRename, onR
     main.appendChild(subSpan);
   }
 
-  const editBtn = document.createElement('span');
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
   editBtn.className = 'item-edit';
   editBtn.textContent = '✎';
-  editBtn.title = 'Zmień nazwę';
+  editBtn.setAttribute('aria-label', 'Rename');
+  editBtn.title = 'Rename';
   editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
 
-  const removeBtn = document.createElement('span');
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
   removeBtn.className = 'item-remove';
   removeBtn.textContent = '×';
-  removeBtn.title = 'Usuń';
+  removeBtn.setAttribute('aria-label', 'Remove');
+  removeBtn.title = 'Remove';
   removeBtn.addEventListener('click', e => { e.stopPropagation(); onRemove(); });
 
   // drag reorder
@@ -776,7 +866,7 @@ function renderMain() {
     gridEl.style.display = 'none';
     gridEmpty.style.display = '';
     panelTitle.textContent = 'Customer journey';
-    stepCountEl.textContent = '0 kroków';
+    stepCountEl.textContent = '0 steps';
     btnExport.disabled = true;
     return;
   }
@@ -800,16 +890,18 @@ function renderJourneyMeta() {
   const title = document.createElement('input');
   title.className = 'title-input';
   title.value = j.title;
-  title.placeholder = 'Tytuł customer journey';
+  title.placeholder = 'Customer journey title';
+  title.setAttribute('aria-label', 'Customer journey title');
   title.addEventListener('input', () => setJourneyField('title', title.value));
-  title.addEventListener('change', () => { setJourneyField('title', title.value.trim() || 'CJ'); });
+  title.addEventListener('change', () => { setJourneyField('title', title.value.trim() || 'Journey'); });
   row1.appendChild(title);
 
   const personaWrap = document.createElement('div');
   personaWrap.style.display = 'flex'; personaWrap.style.flexDirection = 'column'; personaWrap.style.gap = '2px';
   const plab = document.createElement('span'); plab.className = 'field-label'; plab.textContent = 'Persona';
   const psel = document.createElement('select');
-  const noneOpt = document.createElement('option'); noneOpt.value = ''; noneOpt.textContent = '— brak —'; psel.appendChild(noneOpt);
+  psel.setAttribute('aria-label', 'Persona');
+  const noneOpt = document.createElement('option'); noneOpt.value = ''; noneOpt.textContent = '— none —'; psel.appendChild(noneOpt);
   state.personas.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o); });
   psel.value = j.personaId ?? '';
   psel.addEventListener('change', () => { j.personaId = psel.value ? Number(psel.value) : null; save(); renderJourneyList(); });
@@ -820,17 +912,16 @@ function renderJourneyMeta() {
 
   const row2 = document.createElement('div');
   row2.className = 'meta-row';
-  const dWrap = mkField('Scenariusz / opis', j.description, v => { j.description = v; save(); renderJourneyList(); });
-  const eWrap = mkField('Oczekiwania', j.expectations, v => { j.expectations = v; save(); });
+  const dWrap = mkField('Scenario / description', j.description, v => { j.description = v; save(); renderJourneyList(); });
+  const eWrap = mkField('Expectations', j.expectations, v => { j.expectations = v; save(); });
   row2.appendChild(dWrap); row2.appendChild(eWrap);
   journeyMeta.appendChild(row2);
 
-  // toolbar: add stage
   const row3 = document.createElement('div');
   row3.className = 'meta-row';
   const addStageBtn = document.createElement('button');
   addStageBtn.className = 'btn btn-ghost btn-sm';
-  addStageBtn.textContent = '+ Etap';
+  addStageBtn.textContent = '+ Stage';
   addStageBtn.addEventListener('click', addStage);
   row3.appendChild(addStageBtn);
   journeyMeta.appendChild(row3);
@@ -841,57 +932,64 @@ function mkField(label, value, onChange) {
   wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '2px'; wrap.style.flex = '1'; wrap.style.minWidth = '160px';
   const lab = document.createElement('span'); lab.className = 'field-label'; lab.textContent = label;
   const inp = document.createElement('input'); inp.className = 'field-input'; inp.value = value || '';
+  inp.setAttribute('aria-label', label);
   inp.addEventListener('input', () => onChange(inp.value));
   wrap.appendChild(lab); wrap.appendChild(inp);
   return wrap;
 }
 
 // ─── Grid rendering ───────────────────────────────────────────────────────────
+function rowWrap() {
+  const r = document.createElement('div');
+  r.className = 'grow';
+  r.setAttribute('role', 'row');
+  return r;
+}
+
 function renderGrid() {
   const j = currentJourney();
   gridEl.innerHTML = '';
   if (!j) return;
 
-  // flatten steps in order with column indices
-  const flat = []; // {stageIndex, stepIndex, stage, step}
+  const flat = [];
   j.stages.forEach((st, si) => st.steps.forEach((step, ti) => flat.push({ stageIndex: si, stepIndex: ti, stage: st, step })));
   const N = flat.length;
-  const stepCount = N;
-  stepCountEl.textContent = stepCount === 1 ? '1 krok' : `${stepCount} kroków`;
+  stepCountEl.textContent = N === 1 ? '1 step' : `${N} steps`;
 
-  if (N === 0) {
-    gridEl.style.display = 'none';
-    return;
-  }
+  gridEl.setAttribute('aria-label', `${j.title} — grid`);
+
+  if (N === 0) { gridEl.style.display = 'none'; return; }
   gridEl.style.display = '';
   gridEl.style.gridTemplateColumns = `${LABEL_COL_W}px repeat(${N}, ${STEP_COL_W}px)`;
 
   const STAGE_ROW = 1, STEP_ROW = 2, SLICE_BASE = 3;
 
   // Row 1: corner + stages
+  const r1 = rowWrap();
   const corner1 = document.createElement('div');
   corner1.className = 'g-corner';
+  corner1.setAttribute('role', 'presentation');
   place(corner1, STAGE_ROW, 1);
-  gridEl.appendChild(corner1);
+  r1.appendChild(corner1);
 
   j.stages.forEach((st, si) => {
-    // columns spanned: first..last step column of this stage
     let firstFlat = -1, lastFlat = -1;
     flat.forEach((f, i) => { if (f.stage === st) { if (firstFlat === -1) firstFlat = i; lastFlat = i; } });
-    const startCol = 2 + firstFlat;
-    const endCol = 2 + lastFlat;
+    const startCol = 2 + firstFlat, endCol = 2 + lastFlat;
     const cell = document.createElement('div');
     cell.className = 'g-stage';
     cell.dataset.stageId = st.id;
+    cell.setAttribute('role', 'columnheader');
+    cell.setAttribute('aria-label', `Stage: ${st.name}`);
     place(cell, STAGE_ROW, startCol, endCol);
 
-    const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.textContent = '⠿';
+    const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.textContent = '⠿'; handle.setAttribute('aria-hidden', 'true');
     const nameSpan = document.createElement('span'); nameSpan.className = 'stage-name'; nameSpan.textContent = st.name;
     nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, st.name, v => renameStage(st.id, v)); });
-    const addStepBtn = document.createElement('button'); addStepBtn.className = 'stage-add-step'; addStepBtn.textContent = '+ krok'; addStepBtn.title = 'Dodaj krok do etapu';
+    const addStepBtn = document.createElement('button'); addStepBtn.className = 'stage-add-step'; addStepBtn.type = 'button';
+    addStepBtn.textContent = '+ step'; addStepBtn.setAttribute('aria-label', `Add step to ${st.name}`); addStepBtn.title = 'Add step to stage';
     addStepBtn.addEventListener('click', e => { e.stopPropagation(); addStep(st.id); });
 
-    // stage drag reorder
     cell.draggable = true;
     cell.addEventListener('dragstart', e => { gridDrag = { kind: 'stage', from: si }; cell.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
     cell.addEventListener('dragend', () => { gridDrag = null; gridEl.querySelectorAll('.g-stage').forEach(el => el.classList.remove('dragging', 'drop-before', 'drop-after')); });
@@ -912,14 +1010,17 @@ function renderGrid() {
     });
 
     cell.appendChild(handle); cell.appendChild(nameSpan); cell.appendChild(addStepBtn);
-    gridEl.appendChild(cell);
+    r1.appendChild(cell);
   });
+  gridEl.appendChild(r1);
 
   // Row 2: corner + step headers
+  const r2 = rowWrap();
   const corner2 = document.createElement('div');
-  corner2.className = 'g-corner row-step'; corner2.textContent = 'Krok';
+  corner2.className = 'g-corner row-step'; corner2.textContent = 'Step';
+  corner2.setAttribute('role', 'columnheader');
   place(corner2, STEP_ROW, 1);
-  gridEl.appendChild(corner2);
+  r2.appendChild(corner2);
 
   flat.forEach((f, col) => {
     const colNum = 2 + col;
@@ -927,14 +1028,16 @@ function renderGrid() {
     const cell = document.createElement('div');
     cell.className = 'g-step';
     cell.dataset.stepId = step.id;
+    cell.setAttribute('role', 'columnheader');
+    cell.setAttribute('aria-label', `Step: ${step.name}`);
     place(cell, STEP_ROW, colNum);
 
     const nameSpan = document.createElement('span'); nameSpan.className = 'step-name'; nameSpan.textContent = step.name;
     nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, step.name, v => renameStep(step.id, v)); });
-    const removeBtn = document.createElement('span'); removeBtn.className = 'step-remove'; removeBtn.textContent = '×'; removeBtn.title = 'Usuń krok';
+    const removeBtn = document.createElement('button'); removeBtn.type = 'button'; removeBtn.className = 'step-remove';
+    removeBtn.textContent = '×'; removeBtn.setAttribute('aria-label', `Remove step ${step.name}`); removeBtn.title = 'Remove step';
     removeBtn.addEventListener('click', e => { e.stopPropagation(); removeStep(step.id); });
 
-    // step drag reorder (within/between stages)
     cell.draggable = true;
     cell.addEventListener('dragstart', e => { gridDrag = { kind: 'step', fromStageId: f.stage.id, fromIndex: f.stepIndex }; cell.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
     cell.addEventListener('dragend', () => { gridDrag = null; gridEl.querySelectorAll('.g-step').forEach(el => el.classList.remove('dragging', 'drop-before', 'drop-after')); });
@@ -954,38 +1057,54 @@ function renderGrid() {
     });
 
     cell.appendChild(nameSpan); cell.appendChild(removeBtn);
-    gridEl.appendChild(cell);
+    r2.appendChild(cell);
 
     if (_pendingStepRename === step.id) {
       _pendingStepRename = null;
       startEdit(nameSpan, step.name, v => renameStep(step.id, v));
     }
   });
+  gridEl.appendChild(r2);
 
   // Rows 3..: slices
   SLICES.forEach((slice, sIdx) => {
     const row = SLICE_BASE + sIdx;
+    const rs = rowWrap();
+
     const label = document.createElement('div');
     label.className = 'g-slice-label';
     label.textContent = slice.label;
+    label.setAttribute('role', 'rowheader');
     place(label, row, 1);
-    gridEl.appendChild(label);
+    rs.appendChild(label);
 
     flat.forEach((f, col) => {
       const colNum = 2 + col;
       const step = f.step;
       const cellEl = document.createElement('div');
       cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '');
+      cellEl.setAttribute('role', 'gridcell');
+      cellEl.setAttribute('aria-label', cellAriaLabel(slice, step));
       place(cellEl, row, colNum);
 
-      if (slice.key === EMOTION_KEY) {
-        cellEl.appendChild(buildEmotion(step));
-      } else {
-        cellEl.appendChild(buildCellElements(step, slice.key));
-      }
-      gridEl.appendChild(cellEl);
+      if (slice.key === EMOTION_KEY) cellEl.appendChild(buildEmotion(step));
+      else cellEl.appendChild(buildCellElements(step, slice.key));
+      rs.appendChild(cellEl);
     });
+    gridEl.appendChild(rs);
   });
+}
+
+function cellAriaLabel(slice, step) {
+  let detail;
+  if (slice.key === EMOTION_KEY) {
+    const v = step.cells[EMOTION_KEY];
+    detail = (v != null) ? `emotion ${v} of 5` : 'emotion not rated';
+  } else {
+    const list = step.cells[slice.key] || [];
+    detail = list.map(e => e.text).filter(Boolean).join('; ') || 'empty';
+  }
+  return `${slice.label}, ${step.name}: ${detail}`;
 }
 
 let gridDrag = null;
@@ -1004,10 +1123,11 @@ function buildCellElements(step, slice) {
     row.className = 'element';
     row.draggable = true;
 
-    const handle = document.createElement('span'); handle.className = 'el-handle'; handle.textContent = '⠿';
+    const handle = document.createElement('span'); handle.className = 'el-handle'; handle.textContent = '⠿'; handle.setAttribute('aria-hidden', 'true');
     const text = document.createElement('span'); text.className = 'el-text'; text.textContent = el.text;
     text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, el.text); });
-    const rm = document.createElement('span'); rm.className = 'el-remove'; rm.textContent = '×'; rm.title = 'Usuń element';
+    const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'el-remove'; rm.textContent = '×';
+    rm.setAttribute('aria-label', 'Remove item'); rm.title = 'Remove item';
     rm.addEventListener('click', ev => { ev.stopPropagation(); removeElement(step.id, slice, el.id); });
 
     row.addEventListener('dragstart', ev => { elementDrag = { stepId: step.id, slice, from: idx }; row.classList.add('dragging'); ev.stopPropagation(); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', ''); });
@@ -1019,8 +1139,7 @@ function buildCellElements(step, slice) {
     row.addEventListener('drop', ev => {
       if (!elementDrag || elementDrag.stepId !== step.id || elementDrag.slice !== slice) return;
       ev.preventDefault(); ev.stopPropagation();
-      const to = idx;
-      moveElement(elementDrag.stepId, elementDrag.slice, elementDrag.from, to);
+      moveElement(elementDrag.stepId, elementDrag.slice, elementDrag.from, idx);
     });
 
     row.appendChild(handle); row.appendChild(text); row.appendChild(rm);
@@ -1028,13 +1147,12 @@ function buildCellElements(step, slice) {
 
     if (_pendingElementEdit && _pendingElementEdit.stepId === step.id && _pendingElementEdit.slice === slice && _pendingElementEdit.elementId === el.id) {
       _pendingElementEdit = null;
-      // defer so input replaces after append
       setTimeout(() => startElementEdit(text, step.id, slice, el.id, el.text), 0);
     }
   });
 
   const addBtn = document.createElement('button');
-  addBtn.className = 'add-element'; addBtn.textContent = '+ element';
+  addBtn.type = 'button'; addBtn.className = 'add-element'; addBtn.textContent = '+ item';
   addBtn.addEventListener('click', e => { e.stopPropagation(); addElement(step.id, slice); });
   wrap.appendChild(addBtn);
   return wrap;
@@ -1044,25 +1162,36 @@ let elementDrag = null;
 function buildEmotion(step) {
   const wrap = document.createElement('div');
   wrap.className = 'emo-dots';
+  wrap.setAttribute('role', 'radiogroup');
+  wrap.setAttribute('aria-label', 'Emotion rating');
   const val = step.cells[EMOTION_KEY];
   for (let v = 1; v <= 5; v++) {
-    const dot = document.createElement('div');
+    const dot = document.createElement('button');
+    dot.type = 'button';
     dot.className = 'emo-dot' + (val != null && v <= val ? ' on' : '');
+    dot.setAttribute('role', 'radio');
+    dot.setAttribute('aria-checked', val === v ? 'true' : 'false');
     if (val != null && v <= val) dot.style.setProperty('--emo', EMO_COLORS[val - 1]);
+    dot.setAttribute('aria-label', `${v} of 5`);
     dot.title = `${v}/5`;
     dot.addEventListener('click', e => { e.stopPropagation(); setEmotion(step.id, v); });
     wrap.appendChild(dot);
   }
   if (val != null) {
-    const clr = document.createElement('span'); clr.className = 'emo-clear'; clr.textContent = '×'; clr.title = 'Wyczyść';
-    clr.addEventListener('click', e => { e.stopPropagation(); setEmotion(step.id, val); }); // toggles off (same value → null)
+    const clr = document.createElement('button'); clr.type = 'button'; clr.className = 'emo-clear'; clr.textContent = '×';
+    clr.setAttribute('aria-label', 'Clear emotion'); clr.title = 'Clear';
+    clr.addEventListener('click', e => { e.stopPropagation(); setEmotion(step.id, val); });
     wrap.appendChild(clr);
   }
   return wrap;
 }
 
-// ─── Export PNG ───────────────────────────────────────────────────────────────
+// ─── Export PNG (theme-aware via CSS tokens) ──────────────────────────────────
 function safeFilename(name) { return (name || 'unnamed').trim().replace(/[/\\:*?"<>|]/g, '_'); }
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
 
 function exportPng() {
   const j = currentJourney(); if (!j) return;
@@ -1070,12 +1199,17 @@ function exportPng() {
   j.stages.forEach(st => st.steps.forEach(step => flat.push({ stage: st, step })));
   if (flat.length === 0) return;
 
+  const C = {
+    bg: cssVar('--bg', '#fff'), panel: cssVar('--panel', '#fff'), panel2: cssVar('--panel-2', '#f1f3f5'),
+    border: cssVar('--border', '#d0d7de'), borderSoft: cssVar('--border-soft', '#e5e7eb'),
+    text: cssVar('--text', '#1f2328'), text2: cssVar('--text-2', '#57606a'), text3: cssVar('--text-3', '#6e7781'),
+    cell: cssVar('--cell', '#fff'),
+  };
   const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 140, colW = 200, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
 
-  // measure row heights
   function wrapLines(text, maxW) {
     if (!text) return [];
     const words = String(text).split(/\s+/);
@@ -1110,75 +1244,64 @@ function exportPng() {
   ctx.scale(dpr, dpr);
   ctx.font = font;
 
-  // background
-  ctx.fillStyle = '#111'; ctx.fillRect(0, 0, totalW, totalH);
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, totalW, totalH);
 
   const x0 = pad, y0 = pad;
-  // title
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
-  const persona = personaName(j.personaId);
-  ctx.fillText(`${j.title}  ·  ${persona}`, x0, y0 + 16);
+  ctx.fillStyle = C.text; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
+  ctx.fillText(`${j.title}  ·  ${personaName(j.personaId)}`, x0, y0 + 16);
   ctx.font = font;
 
   let y = y0 + headerH;
-  // stage band
   j.stages.forEach(st => {
     const first = flat.findIndex(f => f.stage === st);
     const lasts = []; for (let i = 0; i < flat.length; i++) if (flat[i].stage === st) lasts.push(i);
     const last = lasts[lasts.length - 1];
     const x1 = x0 + labelW + first * colW;
-    const w = (last - first + 1) * colW;
-    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(x1, y, w, 0); // (stage drawn slim below step header)
-    ctx.fillStyle = '#ccc'; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(st.name, x1 + 8, y - 6);
+    ctx.fillStyle = C.panel2; ctx.fillRect(x1, y, (last - first + 1) * colW, 22);
+    ctx.fillStyle = C.text2; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(st.name, x1 + 8, y + 15);
     ctx.font = font;
   });
+  y += 22;
 
-  // step headers
   flat.forEach((f, col) => {
     const x1 = x0 + labelW + col * colW;
-    ctx.fillStyle = '#141414'; ctx.fillRect(x1, y, colW, stepHeaderH);
-    ctx.strokeStyle = '#222'; ctx.strokeRect(x1, y, colW, stepHeaderH);
-    ctx.fillStyle = '#999';
+    ctx.fillStyle = C.panel; ctx.fillRect(x1, y, colW, stepHeaderH);
+    ctx.strokeStyle = C.border; ctx.strokeRect(x1, y, colW, stepHeaderH);
+    ctx.fillStyle = C.text2;
     ctx.fillText(trunc(ctx, f.step.name, colW - 12), x1 + 7, y + 20);
   });
-  // label corner
-  ctx.fillStyle = '#161616'; ctx.fillRect(x0, y, labelW, stepHeaderH);
-  ctx.strokeStyle = '#222'; ctx.strokeRect(x0, y, labelW, stepHeaderH);
-  ctx.fillStyle = '#555'; ctx.fillText('Krok', x0 + 8, y + 20);
+  ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, stepHeaderH);
+  ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, stepHeaderH);
+  ctx.fillStyle = C.text3; ctx.fillText('Step', x0 + 8, y + 20);
   y += stepHeaderH;
 
-  // slice rows
   sliceRows.forEach(({ slice, h }) => {
-    // label
-    ctx.fillStyle = '#161616'; ctx.fillRect(x0, y, labelW, h);
-    ctx.strokeStyle = '#222'; ctx.strokeRect(x0, y, labelW, h);
-    ctx.fillStyle = '#777'; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
+    ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, h);
+    ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, h);
+    ctx.fillStyle = C.text3; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
     ctx.fillText(slice.label, x0 + 8, y + 17);
     ctx.font = font;
-    // cells
     flat.forEach((f, col) => {
       const x1 = x0 + labelW + col * colW;
-      ctx.fillStyle = '#111'; ctx.fillRect(x1, y, colW, h);
-      ctx.strokeStyle = '#1e1e1e'; ctx.strokeRect(x1, y, colW, h);
+      ctx.fillStyle = C.cell; ctx.fillRect(x1, y, colW, h);
+      ctx.strokeStyle = C.borderSoft; ctx.strokeRect(x1, y, colW, h);
       if (slice.key === EMOTION_KEY) {
         const v = f.step.cells[EMOTION_KEY];
         if (v != null) {
           ctx.fillStyle = EMO_COLORS[v - 1];
-          for (let k = 0; k < v; k++) {
-            ctx.beginPath(); ctx.arc(x1 + 12 + k * 16, y + h / 2, 5, 0, Math.PI * 2); ctx.fill();
-          }
-        } else { ctx.fillStyle = '#3a3a3a'; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
+          for (let k = 0; k < v; k++) { ctx.beginPath(); ctx.arc(x1 + 12 + k * 16, y + h / 2, 5, 0, Math.PI * 2); ctx.fill(); }
+        } else { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
       } else {
         const list = f.step.cells[slice.key] || [];
         let ty = y + 16;
         list.forEach(el => {
           const lines = wrapLines(el.text, colW - 18) || [''];
-          ctx.fillStyle = '#ccc';
+          ctx.fillStyle = C.text2;
           lines.forEach(ln => { ctx.fillText(ln, x1 + 8, ty); ty += lineH; });
           ty += 2;
         });
-        if (list.length === 0) { ctx.fillStyle = '#3a3a3a'; ctx.fillText('—', x1 + 8, y + 17); }
+        if (list.length === 0) { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + 17); }
       }
     });
     y += h;
@@ -1191,8 +1314,8 @@ function exportPng() {
     a.download = `${safeFilename(j.title)}.png`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    btnExport.textContent = '✓ Zapisano';
-    setTimeout(() => { btnExport.textContent = '↓ Eksport PNG'; }, 1500);
+    btnExport.textContent = '✓ Saved';
+    setTimeout(() => { btnExport.textContent = '↓ Export PNG'; }, 1500);
   }, 'image/png');
 }
 
@@ -1204,6 +1327,7 @@ function trunc(ctx, text, maxW) {
 }
 
 // ─── Wiring ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-theme').addEventListener('click', toggleTheme);
 document.getElementById('btn-add-category').addEventListener('click', () => createCategory());
 document.getElementById('btn-add-persona').addEventListener('click', () => createPersona());
 document.getElementById('btn-add-journey').addEventListener('click', () => createJourney());
@@ -1212,12 +1336,6 @@ btnEmptyAdd.addEventListener('click', () => {
   createJourney();
 });
 btnExport.addEventListener('click', exportPng);
-
-document.addEventListener('paste', e => {
-  const t = e.clipboardData?.getData('text/plain');
-  if (!t || !t.trim()) return;
-  // no active cell concept yet; ignore paste-into-cell for MVP
-});
 
 // sidebar resize
 const SB_MIN = 160, SB_MAX = 420;
@@ -1244,17 +1362,17 @@ sidebarResizer.addEventListener('mousedown', e => {
 (async () => {
   await load();
   if (state.categories.length === 0) {
-    // seed a minimal example so the grid is immediately demoable
     const cat = newCategory('Cash loan');
     const persona = newPersona('Anna');
     state.personas.push(persona);
-    const j = newJourney('Wniosek gotówkowy', persona.id);
-    j.description = 'Składanie wniosku o pożyczkę';
+    const j = newJourney('Cash loan application', persona.id);
+    j.description = 'Submitting a loan application';
     cat.journeys.push(j);
     state.categories.push(cat);
     save();
   }
   ensureActiveIndicesValid();
+  applyTheme();
   sidebar.style.width = (state.sidebarWidth || 220) + 'px';
   render();
 })();

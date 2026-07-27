@@ -38,33 +38,46 @@ Każda aplikacja w `apps/` **musi** spełniać:
 
 ## 2. Warstwa wizualna (design system)
 
-Wszystkie aplikacje współdzielą **spójny dark-theme design system** wywodzący się z `image-slicer`, żeby zbiór narzędzi czytał się jako jeden produkt.
+Wszystkie aplikacje współdzielą **spójny design system** (light domyślnie + dark) wywodzący się z `image-slicer`, żeby zbiór narzędzi czytał się jako jeden produkt. Kolory realizowane są **wyłącznie przez tokeny CSS** (custom properties) — nigdy przez zakodowane wartości w komponentach.
 
-### 2.1 Paleta
-| Rola | Kolor | Użycie |
-|------|-------|--------|
-| Tło aplikacji | `#111` | `body` |
-| Tło paneli/sidebar | `#141414` `#161616` `#1a1a1a` | sekcje, header panelu |
-| Granice | `#1e1e1e` `#222` `#2a2a2a` | bordery, separatory |
-| Tekst główny | `#e0e0e0` | treść |
-| Tekst wtórny | `#999` `#777` `#666` | nazwy elementów, hinty |
-| Tekst marginalny | `#555` `#444` `#3a3a3a` | etykiety sekcji, empty states |
-| **Akcent primary** | `#3b82f6` (hover `#2563eb`) | przyciski główne, aktywne elementy, focus |
-| **Akcent danger/akcji** | `#f43f5e` | linie cięcia, usuwanie, akcje destrukcyjne |
+### 2.1 Tokeny i motywy (light domyślnie + dark)
+
+Tokeny definiowane na `:root` (light) i nadpisywane w `[data-theme="dark"]`. Aktywny motyw ustawiany przez atrybut `data-theme` na `<html>` (resolved `'light'` / `'dark'`); wybór persystowany w `state.theme` (`'light'` | `'dark'` | `'auto'` — `auto` podąża za `prefers-color-scheme` i aktualizuje się na żywo). **Domyślny motyw aplikacji to `light`.**
+
+| Token | Light | Dark | Rola |
+|------|-------|------|------|
+| `--bg` | `#f6f8fa` | `#111` | tło aplikacji (`body`) |
+| `--panel` | `#ffffff` | `#141414` | tło sidebar/sekcji |
+| `--panel-2` | `#f1f3f5` | `#161616` | panel-header, etykiety wierszy |
+| `--panel-3` | `#eaecef` | `#1a1a1a` | header aplikacji, etapy |
+| `--inset` | `#ffffff` | `#1a1a1a` | tło inputów |
+| `--border` | `#d0d7de` | `#2a2a2a` | bordery |
+| `--border-soft` | `#e5e7eb` | `#1e1e1e` | separatory komórek |
+| `--text` | `#1f2328` | `#e0e0e0` | tekst główny |
+| `--text-2` | `#57606a` | `#999` | tekst wtórny |
+| `--text-3` | `#6e7781` | `#777` | treść list |
+| `--text-4` | `#8c959f` | `#555` | etykiety sekcji, empty states |
+| `--accent` / `--accent-hover` | `#2563eb` / `#1d4ed8` | `#3b82f6` / `#2563eb` | primary, aktywne elementy, focus |
+| `--danger` | `#d1242f` | `#f43f5e` | akcje destrukcyjne |
+| `--chip` / `--chip-text` | `#eaecef` / `#57606a` | `#2a2a2a` / `#888` | liczniki, znaczniki |
+| `--cell` / `--cell-hover` | `#ffffff` / `#f6f8fa` | `#111` / `#161616` | komórki siatki |
+| `--scrollbar` | `#c8d0d8` | `#2a2a2a` | thumb scrollbara |
+
+W komponentach używaj **wyłącznie `var(--token)`**. Kontrast interaktywnych elementów ≥ WCAG AA w obu motywach. Widoczny `:focus-visible` ring (`outline: 2px solid var(--accent)`). Przełącznik motywu w headerze (`☀`/`☾`/`◐`), cykl `light → dark → auto`.
 
 ### 2.2 Typografia
 - Font: `-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` (systemowy — zero ładowania).
 - Header `h1`: `15px / 600`.
-- Etykiety sekcji / panel-header: `10–11px`, `700`, `uppercase`, `letter-spacing 0.08–0.1em`, kolor `#444–#555`.
+- Etykiety sekcji / panel-header: `10–11px`, `700`, `uppercase`, `letter-spacing 0.08–0.1em`, kolor `var(--text-4)`.
 - Treść list: `12px`. Przyciski: `12–13px / 500`.
 
 ### 2.3 Komponenty UI (zachować spójne)
-- **Przyciski**: `.btn`, warianty `.btn-primary` (filled blue), `.btn-ghost` (transparent + border), rozmiar `.btn-sm`.
-- **Sidebar** z listami: drag-to-reorder, hover-reveal akcji (✎ edytuj, × usuń), inline rename, miniatury.
+- **Przyciski**: `.btn`, warianty `.btn-primary` (filled accent), `.btn-ghost` (transparent + border), rozmiar `.btn-sm`. Ikony-akcje (✎ × ⠿ + ☀) to prawdziwe `<button>` z `aria-label`.
+- **Sidebar** (`<aside aria-label="…">`) z listami: drag-to-reorder, hover-reveal akcji, inline rename, miniatury.
 - **Panel**: `.panel-header` (etykieta + licznik `.count`) + `.panel-body` (scrollowalne).
 - **Drop zone / empty state**: dashed border `2px`, ikona SVG, opis, akcent na hover/drag-over.
-- **Custom scrollbars**: cienkie (`4–6px`), thumb `#2a2a2a`.
-- **Resize handle** panelu (np. sidebar) z persystencją szerokości w stanie.
+- **Custom scrollbars**: cienkie (`4–6px`), thumb `var(--scrollbar)`.
+- **Resize handle** panelu (np. sidebar) z persystencją szerokości w stanie (`role="separator"`).
 
 ---
 

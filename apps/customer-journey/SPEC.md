@@ -103,6 +103,7 @@ Otworzyć customer journey → edytować **siatkę kroków × slice'ów** (dodaw
 | push | `push` | Touchpoint: powiadomienie push wychodzące do klienta. |
 | komórka | `cell` | Lista elementów w przecięciu kroku (kolumna) i slice'a (wiersz). |
 | element | `element` | Pojedynczy niezależny wpis tekstowy w komórce (może być wiele; kolejność zarządzana, usuwany osobno). |
+| motyw | `theme` | Motyw UI: `light` (domyślnie), `dark`, `auto` (podąża za `prefers-color-scheme`); persystowany w `state.theme`. |
 | scenariusz | `scenario` | Nagłówek CJ: sytuacja/cel, którego dotyczy mapa (NN/g Scenario). |
 | oczekiwania | `expectations` | Nagłówek CJ: czego klient oczekuje (NN/g Expectations). |
 | wariant | `variant` | (Later) Kopia CJ bazowej z wprowadzonymi zmianami. |
