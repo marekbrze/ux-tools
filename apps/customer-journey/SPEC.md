@@ -275,3 +275,30 @@ Portability/backup danych: eksport i import pełnej bazy (kategorie/persony/CJ) 
 - `gap` na `.sb-item` dotyczy wszystkich pozycji → więcej odstępu (poprawa, brak regresji).
 - `sub` jako array/string: tylko `renderJourneyList` przekazuje array; `renderCategoryList`/`renderPersonaList` przekazują string (zachowane). `mkSidebarItem` obsługuje oba.
 - Pusta tablica `sub` (`[]`) → brak linii sub (poprawne).
+
+### Change 6 — bug: sidebar lines never stacked — item-main not a flex column (2026-07-27)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟡 medium — dotyczy czytelności całego sidebar; powód, dla którego Change 4 i 5 „nie zadziałały" wizualnie.
+
+**Reproduction**
+1. Sidebar: pomiędzy nazwą kategorii a liczbą CJ (item-sub) **nie ma marginesu** — teksty stykają się.
+2. Karta CJ: tytuł, persona i opis również bez odstępu między liniami.
+**Expected**: nazwa / count (oraz title / persona / opis) ułożone pionowo z wyraźnym odstępem. **Actual**: linie bez separacji.
+**Reliability**: za każdym razem.
+**Location**: `index.html:129` (`.item-main { flex:1; min-width:0; }`), `index.html:131` (`.item-sub { ... margin-top: 4px }`).
+
+**Root cause**
+**Class**: visual / CSS
+**Cause**: `.item-main` (L129) **nie jest kontenerem flex-column** — dzieci (`<span class="item-name">`, `<span class="item-sub">`) są elementami **inline**, więc nie układają się w osobnych wierszach, a `margin-top` na elementach inline jest **ignorowany**. Dlatego `margin-top:4px` (Change 4) i array-sub (Change 5) nie dały widocznego efektu — separacja nigdy fizycznie nie zadziałała. (Skutek uboczny: `text-overflow:ellipsis` na `item-name` też nie działa, bo inline span — długie nazwy nie są ucinane.)
+**Evidence**: L129 brak `display:flex; flex-direction:column`; L131 `margin-top: 4px` (ignorowane na inline); L130 `item-name` inline span. Spec intent: SPEC.md §Requirements→Screens (lista CJ z personą + opisem — czytelność).
+
+**Fix plan**
+- **L129**: `.sb-item .item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }` — dzieci stają się flex-items (blockowane), układają się pionowo z odstępem 6px.
+- **L131**: `.item-sub` — usuń `margin-top: 4px` (→ `margin-top: 0`); odstęp przejmuje `gap` na `.item-main`.
+- **Bonus**: jako flex-item, `item-name` się „zablokuje" → `text-overflow:ellipsis` zacznie działać (długie nazwy ucinane).
+- **Spec impact**: none — prezentacja sidebar.
+
+**Regression scope**
+- Zmiana dotyczy wszystkich pozycji sidebar (kategorie/persony/CJ) → wszystkie dostaną poprawne stackowanie + 6px odstępu między liniami (poprawa, brak regresji).
+- `item-name` zacznie truncate długie nazwy (pożądane).
+- Kategorie/persony nadal używają string-sub (jedna linia sub); CJ używa array-sub (wiele linii) — oba renderują się poprawnie w flex-column.
