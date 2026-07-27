@@ -126,9 +126,9 @@
   .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: var(--text-3); cursor: pointer; gap: 10px; }
   .sb-item:hover { background: var(--cell-hover); color: var(--text-2); }
   .sb-item.active { background: var(--accent-soft); color: var(--text); }
-  .sb-item .item-main { flex: 1; min-width: 0; }
+  .sb-item .item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .sb-item .item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sb-item .item-sub { font-size: 10.5px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
+  .sb-item .item-sub { font-size: 10.5px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0; }
   .sb-item .item-count { background: var(--chip); border-radius: 10px; padding: 0 6px; font-size: 10px; color: var(--chip-text); margin-left: 4px; flex-shrink: 0; }
   .sb-item input.rename-input { width: 100%; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 12px; padding: 1px 4px; outline: none; }
 
