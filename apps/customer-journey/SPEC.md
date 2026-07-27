@@ -213,3 +213,38 @@ Portability/backup danych: eksport i import pełnej bazy (kategorie/persony/CJ) 
 4. UI: w headerze dodaj `.btn-ghost btn-sm` „↧ Export JSON" i „↥ Import" (obok Export PNG); w journey-meta toolbar dodaj `.btn-ghost btn-sm` „↧ Export CJ" obok „+ Stage". Przycisk Import → `importInput.click()`.
 5. Feedback: toast sukcesu „✓ Imported (N journeys)"/„✓ Journey imported" i błędu „✗ Invalid file" (wzorzec jak `showStorageError`); brak `alert()`.
 6. Bezpieczeństwo: pełna-baza replace tylko po `confirm()` (natywny OK dla destruktywnej bramki); single-journey import bez confirm (addytywny).
+
+### Change 4 — bug: sidebar pluralization + spacing + journey cards (2026-07-27)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟢 low — cosmetic/presentation, bez wpływu na funkcjonalność.
+
+**Reproduction**
+1. Sidebar: kategoria z dokładnie 1 CJ → licznik pokazuje „1 journeys" (zła liczba pojedyncza).
+2. Każda pozycja listy (np. CJ): nazwa i treść dodatkowa (persona · opis) stykają się (margin 1px) — brak odstępu.
+3. Lista CJ to płaskie wiersze jak kategorie/persony — nie czyta się jako karty.
+**Expected**: „1 journey" / „N journeys" (i18n plural), wyraźny odstęp nazwa↔sub, CJ jako karty. **Actual**: „1 journeys", brak odstępu, płaskie wiersze.
+**Reliability**: za każdym razem.
+**Location**: `index.html:710` (count sub), `index.html:131` (`.item-sub` margin), `index.html:778` + `index.html:744` (journey items przez `mkSidebarItem` bez wariantu karty).
+
+**Root cause**
+**Class**: visual / UX
+**Cause**: (1) licznik na L710 ma hardcoded „journeys" bez liczby pojedynczej — pattern singular/plural istnieje dla stepów (L967), ale tu nie zastosowany. (2) `.item-sub` ma `margin-top: 1px` (L131) — zbyt ciasny odstęp nazwa↔treść. (3) journey items renderowane są tym samym generycznym `.sb-item` co kategorie/persony (`mkSidebarItem` L778) — brak wariantu „card", więc lista CJ wygląda jak zwykłe wiersze zamiast kart.
+**Evidence**: L710 `sub: \`${cat.journeys.length} journeys\``; L131 `margin-top: 1px`; L778 `li.className = 'sb-item' ...` (brak klas wariantu); L744 `renderJourneyList` → `mkSidebarItem` bez flagi `card`. Spec intent: SPEC.md §Requirements→Screens (sidebar z listą CJ pokazuje personę + opis — czytelność) + CLAUDE.md §2.3 (sidebar, komponenty spójne).
+
+**Fix plan**
+- **Pluralization (L710)**: dodaj helper `function plural(n, one, many){ return n===1?one:many; }` i użyj: `sub: \`${cat.journeys.length} ${plural(cat.journeys.length,'journey','journeys')}\``. (Opcjonalnie zastąp nim też ternary w stepCount L967 dla spójności.)
+- **Spacing (L131)**: `.sb-item .item-sub { margin-top: 4px; }` (z 1px) — wyraźny odstęp nazwa↔treść.
+- **Journey cards**: w `mkSidebarItem` dodaj parametr `card` → `li.className = 'sb-item' + (active?' active':'') + (card?' sb-card':'')`; w `renderJourneyList` przekaż `card: true`. CSS:
+  - `.sb-item.sb-card { background: var(--cell); border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }`
+  - `.sb-item.sb-card:hover { background: var(--cell-hover); border-color: var(--border); }`
+  - `.sb-item.sb-card.active { background: var(--accent-soft); border-color: var(--accent); }`
+  - `.sb-item.sb-card .item-name { font-weight: 600; color: var(--text-2); }` (`.sb-item.sb-card.active .item-name` → `var(--text)`).
+  - Kategoria/persona zostają płaskimi wierszami (bez `sb-card`).
+- **Spec impact**: none — prezentacja sidebar; SPEC §Screens opisuje listę CJ z personą+opisem, to poprawia czytelność bez zmiany danych/akcji.
+
+**Regression scope**
+- `.item-sub` margin dotyczy wszystkich pozycji sidebar (kategorie/persony/CJ) → wszystkie dostają więcej odstępu (poprawa, brak regresji).
+- `.sb-card` tylko na journey items; kategorie/persony nietknięte.
+- `plural()` nowy helper, użyty na L710; bezpieczny.
+- `mkSidebarItem` +1 parametr `card`; tylko `renderJourneyList` przekazuje `true`.
+- Drag-reorder / drop indicators (`.sb-item`) nadal działają — `sb-card` zachowuje klasę `sb-item`.
