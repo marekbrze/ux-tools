@@ -248,3 +248,30 @@ Portability/backup danych: eksport i import pełnej bazy (kategorie/persony/CJ) 
 - `plural()` nowy helper, użyty na L710; bezpieczny.
 - `mkSidebarItem` +1 parametr `card`; tylko `renderJourneyList` przekazuje `true`.
 - Drag-reorder / drop indicators (`.sb-item`) nadal działają — `sb-card` zachowuje klasę `sb-item`.
+
+### Change 5 — bug: sidebar name↔actions spacing + CJ card stacked info (2026-07-27)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟢 low — cosmetic/presentation sidebar.
+
+**Reproduction**
+1. Sidebar: nazwa kategorii / CJ styka się z przyciskami akcji po prawej (✎ × ⠿) — brak poziomego odstępu.
+2. Karta CJ: persona i opis są w jednej, uciętej linii („persona · opis") zamiast osobnymi liniami pod tytułem.
+**Expected**: wyraźny odstęp nazwa↔przyciski akcji; CJ → tytuł (1 linia) + **persona** + **opis** jako osobne linie poniżej. **Actual**: stykające się nazwa i przyciski; persona+opis w jednej uciętej linii.
+**Reliability**: za każdym razem.
+**Location**: `index.html:126` (`.sb-item { gap: 6px }`), `index.html:804-808` (`mkSidebarItem` renderuje `sub` jako jeden `span`), `renderJourneyList` (łączy `persona · opis` w jeden string).
+
+**Root cause**
+**Class**: visual / UX
+**Cause**: (1) `.sb-item` ma `gap: 6px` (L126) — zbyt mały odstęp między `item-main` (nazwa) a grupą przycisków akcji po prawej. (2) `mkSidebarItem` renderuje `sub` zawsze jako jeden `span` (L804-808), a `renderJourneyList` łączy personę i opis w jeden string „·" → jedna ucięta linia zamiast stacku pod tytułem.
+**Evidence**: L126 `gap: 6px`; L804 `if (sub) { const subSpan = ...; subSpan.textContent = sub; }`; renderJourneyList `sub: \`${personaName(...)}${j.description ? ' · ' + j.description : ''}\``. Spec intent: SPEC.md §Requirements→Screens (lista CJ pokazuje personę + opis — czytelność) + CLAUDE.md §2.3.
+
+**Fix plan**
+- **Spacing (L126)**: `.sb-item { gap: 10px }` (z 6px) — wyraźny odstęp nazwa↔przyciski akcji (dotyczy wszystkich pozycji sidebar).
+- **Stacked info**: w `mkSidebarItem` obsłuż `sub` jako **string lub array** — jeśli array, renderuj każdy element jako osobny `.item-sub` (stack). Implementacja: `const subs = Array.isArray(sub) ? sub : (sub ? [sub] : []); subs.forEach(s => { const subSpan=...; subSpan.textContent=s; main.appendChild(subSpan); })`.
+- **renderJourneyList**: przekaż `sub: [personaName(j.personaId), j.description].filter(Boolean)` (array) → persona i opis jako osobne linie pod tytułem. Kategoria/persona zostają przy string-sub (niezmienione).
+- **Spec impact**: none — prezentacja sidebar.
+
+**Regression scope**
+- `gap` na `.sb-item` dotyczy wszystkich pozycji → więcej odstępu (poprawa, brak regresji).
+- `sub` jako array/string: tylko `renderJourneyList` przekazuje array; `renderCategoryList`/`renderPersonaList` przekazują string (zachowane). `mkSidebarItem` obsługuje oba.
+- Pusta tablica `sub` (`[]`) → brak linii sub (poprawne).
