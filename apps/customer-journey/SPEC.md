@@ -175,3 +175,41 @@ Narzędzie ma być **po angielsku** (użycie profesjonalne), **dostępne** (a11y
 - W `index.html`: podmień 4 wartości dark (L47-49, L58) i 3 wartości light (L18-20) na wartości AA powyżej.
 - W `CLAUDE.md` §2.1 tabela: zaktualizuj wiersze `--text-2/3/4` (kolumny light + dark) do nowych wartości.
 - Po zmianie: prze-weryfikuj kontrast ≥4.5:1 dla realnych par token×tło. (text-4 na panel-3/chip dotyczy tylko dekoracyjnych drag-handle `aria-hidden` — zwolnione; dla pełnego marginesu text-4 → #5c6670.)
+
+### Change 3 — feature: export/import full DB & single journeys (2026-07-27)
+**Status**: planned — route to ux-build
+
+**User goal**
+Portability/backup danych: eksport i import pełnej bazy (kategorie/persony/CJ) oraz pojedynczych customer journeys — przeniesienie danych między przeglądarkami/urządzeniami, archiwizacja, udostępnianie CJ.
+
+**MVP scope**
+- Eksport pełnej bazy → JSON (header).
+- Eksport pojedynczej CJ (+ snapshot persony) → JSON (journey-meta toolbar).
+- Import z **auto-detekcją kształtu**: pełna baza → **replace-all (z potwierdzeniem)**; pojedyncza CJ → dodaj do bieżącej kategorii + odtwórz personę (po nazwie, jeśli brak).
+- Regeneracja ID przy imporcie (brak kolizji); walidacja kształtu; graceful error; feedback „✓ Imported / ✗ Invalid file".
+
+**Later (deferred)**
+- Selective merge import (wybór co importować).
+- Drag&drop pliku na okno; import wielu CJ naraz.
+- Inne formaty (CSV/Markdown).
+
+**Impact**
+- **Data**: bez zmiany kształtu encji; import operuje na istniejącym `state` (categories/personas/journeys/stages/steps/cells/elements). Eksport = serializacja podzbioru `state` (categories + personas + nextId) do JSON. **Bez key version bump** (czysty JSON nad/pod z istniejącym stanem). Brak blob-ów → localStorage.
+- **Actions**: `exportDatabase()`, `exportJourney()`, `importFromFile(file)` (auto-detect → replace-all / add-journey + persona-recreate + id-regen).
+- **Screens**: przyciski w headerze (Export JSON / Import) + „Export CJ" w journey-meta toolbar (obok „+ Stage"); ukryty `<input type="file" accept="application/json,.json">`.
+- **States**: error — uszkodzony/niewłaściwy JSON → toast „✗ Invalid file"; sukces → „✓ Imported"; full-DB replace → bramka potwierdzenia (native `confirm()` jako wyjątek dla akcji destruktywnej, lub inline modal).
+- **Interactions**: file-picker (click hidden input → change → parse); download via `<a download>` (wzorzec z `exportPng`). Brak drag&drop w MVP.
+- **Edge cases**: uszkodzony/zły JSON → graceful; kolizje ID → regeneracja przez `nextId`; single-journey import bez persony w bazie → utwórz nową (po nazwie); persona o tej samej nazwie istnieje → podłącz (nie duplikuj); pełna baza z 0 CJ → pusty replace; import nadpisuje niezapisane zmiany (dlatego confirm przy full DB).
+- **Glossary**: `backup` (full-DB JSON), `journey-export` (single-CJ JSON).
+
+**Build instructions for ux-build**
+1. `exportDatabase()` → `data = { version:1, kind:'database', categories: state.categories, personas: state.personas }` → `JSON.stringify` → Blob → download `customer-journey-backup-YYYYMMDD.json` (wzorzec download z `exportPng`; `safeFilename`).
+2. `exportJourney()` na `currentJourney()` → `data = { version:1, kind:'journey', journey: structuredClone(j), persona: j.personaId ? {name: personaName(j.personaId)} : null }` → download `<safeFilename(j.title)>.json`.
+3. Ukryty `<input type="file" id="import-file" accept="application/json,.json" style="display:none">`. `importFromFile(file)` → FileReader readAsText → `JSON.parse` (try/catch) → detekcja:
+   - `data.kind==='database'` LUB `data.categories` → pełna baza → `confirm('Replace ALL data with this file?')` → jeśli tak: `state.categories = regenIds(data.categories)`, `state.personas = data.personas || []`, podbij `state.nextId` ponad max ID w danych, `ensureActiveIndicesValid()`, `save()`, `render()`.
+   - `data.kind==='journey'` LUB `data.journey`/`data.stages` → dodaj do `currentCategory()` (jeśli brak kategorii → utwórz); persona: znajdź po nazwie w `state.personas`, jak brak → `newPersona(data.persona.name)`; podepnij `personaId`; zregeneruj ID journey/stages/steps/elements przez `nextId`; `save()`, `render()`.
+   - wpp → toast „✗ Invalid file".
+   - `regenIds` = helper przechodzący po strukturze i nadający nowe ID z `uid()` (kategorie/journeys/stages/steps/elements/persony wg potrzeby).
+4. UI: w headerze dodaj `.btn-ghost btn-sm` „↧ Export JSON" i „↥ Import" (obok Export PNG); w journey-meta toolbar dodaj `.btn-ghost btn-sm` „↧ Export CJ" obok „+ Stage". Przycisk Import → `importInput.click()`.
+5. Feedback: toast sukcesu „✓ Imported (N journeys)"/„✓ Journey imported" i błędu „✗ Invalid file" (wzorzec jak `showStorageError`); brak `alert()`.
+6. Bezpieczeństwo: pełna-baza replace tylko po `confirm()` (natywny OK dla destruktywnej bramki); single-journey import bez confirm (addytywny).
