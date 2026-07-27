@@ -8,7 +8,7 @@ Zasady budowy i design system: patrz [`../CLAUDE.md`](../CLAUDE.md).
 
 | Narzędzie | Co robi | Link (GitHub Pages) |
 |-----------|---------|---------------------|
-| _— jeszcze brak —_ | | |
+| [customer-journey](./customer-journey/) | Edytor map podróży klienta — siatka etapów/kroków × 7 slice'ów (NN/g), CRUD kategorie/persony/CJ, drag&drop, eksport PNG | [Otwórz](https://marekbrze.github.io/ux-tools/apps/customer-journey/) |
 
 <!--
 Format wpisu po dodaniu narzędzia:

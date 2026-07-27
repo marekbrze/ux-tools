@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Journey</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #111;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.02em; }
+  header .spacer { flex: 1; }
+  .hint { font-size: 12px; color: #666; }
+
+  .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.15s; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost { background: transparent; color: #999; border: 1px solid #333; }
+  .btn-ghost:hover { background: #222; color: #ccc; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Main layout ── */
+  main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: #141414;
+    border-right: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px 6px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: #444; flex-shrink: 0;
+  }
+  .sidebar-section-header .btn-add { background: transparent; border: none; color: #555; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; border-radius: 3px; }
+  .sidebar-section-header .btn-add:hover { color: #aaa; background: #222; }
+
+  .sb-list { list-style: none; overflow-y: auto; flex-shrink: 0; }
+  #category-list { border-bottom: 1px solid #1e1e1e; max-height: 32%; }
+  #persona-list   { border-bottom: 1px solid #1e1e1e; max-height: 26%; }
+  #journey-list   { flex: 1; overflow-y: auto; }
+
+  .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: #777; cursor: pointer; gap: 6px; }
+  .sb-item:hover { background: #1c1c1c; color: #ccc; }
+  .sb-item.active { background: #1e2a3a; color: #e0e0e0; }
+  .sb-item .item-main { flex: 1; min-width: 0; }
+  .sb-item .item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-item .item-sub { font-size: 10.5px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .sb-item .item-count { background: #2a2a2a; border-radius: 10px; padding: 0 6px; font-size: 10px; color: #888; margin-left: 4px; flex-shrink: 0; }
+  .sb-item input.rename-input { width: 100%; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; }
+
+  .sb-item .item-edit, .sb-item .item-remove, .sb-item .drag-handle {
+    opacity: 0; color: #555; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 2px 3px; border-radius: 3px; font-size: 11px; user-select: none;
+  }
+  .sb-item:hover .item-edit, .sb-item:hover .item-remove, .sb-item:hover .drag-handle { opacity: 1; }
+  .sb-item .item-edit:hover { color: #60a5fa; background: #1a243a; }
+  .sb-item .item-remove:hover { color: #f43f5e; background: #2a1a1e; }
+  .sb-item .drag-handle { color: #444; cursor: grab; }
+  .sb-item.dragging { opacity: 0.35; }
+  .sb-item.drag-over-above { border-top: 2px solid #3b82f6; }
+  .sb-item.drag-over-below { border-bottom: 2px solid #3b82f6; }
+
+  /* Sidebar resize handle */
+  #sidebar-resizer { width: 4px; flex-shrink: 0; background: #222; cursor: ew-resize; transition: background 0.15s; }
+  #sidebar-resizer:hover, #sidebar-resizer.resizing { background: #3b82f6; }
+
+  /* Scrollbars */
+  .sb-list::-webkit-scrollbar, #grid-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+  .sb-list::-webkit-scrollbar-track, #grid-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sb-list::-webkit-scrollbar-thumb, #grid-scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+
+  /* ── Main panel ── */
+  .panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header {
+    padding: 8px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #555; background: #161616; border-bottom: 1px solid #222; flex-shrink: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-header .count { background: #2a2a2a; border-radius: 10px; padding: 1px 7px; font-size: 11px; color: #888; text-transform: none; }
+
+  /* Journey metadata bar */
+  #journey-meta { padding: 10px 14px; background: #141414; border-bottom: 1px solid #222; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+  #journey-meta .meta-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #journey-meta .title-input { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 5px; color: #fff; font-size: 14px; font-weight: 600; padding: 5px 9px; outline: none; flex: 1; min-width: 180px; }
+  #journey-meta .title-input:focus { border-color: #3b82f6; }
+  #journey-meta select, #journey-meta .field-input {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 5px; color: #ccc; font-size: 12px; padding: 4px 8px; outline: none;
+  }
+  #journey-meta select:focus, #journey-meta .field-input:focus { border-color: #3b82f6; }
+  #journey-meta .field-input { flex: 1; min-width: 160px; }
+  #journey-meta .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #555; }
+
+  /* ── Grid ── */
+  #grid-scroll { flex: 1; overflow: auto; padding: 0; background: #111; }
+
+  #grid { display: grid; align-content: start; }
+
+  .g-corner { background: #161616; position: sticky; left: 0; z-index: 4; border-right: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; }
+  .g-corner.row-step { display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #444; }
+
+  /* Stage header cell (spans its steps) */
+  .g-stage {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-bottom: none;
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; min-height: 30px;
+  }
+  .g-stage .drag-handle { color: #444; cursor: grab; font-size: 12px; user-select: none; }
+  .g-stage:hover .drag-handle { color: #777; }
+  .g-stage .stage-name { font-size: 12px; font-weight: 600; color: #ccc; flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; }
+  .g-stage .stage-name:hover { background: #222; }
+  .g-stage input.rename-input { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; }
+  .g-stage .stage-add-step { background: transparent; border: none; color: #555; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; }
+  .g-stage .stage-add-step:hover { color: #60a5fa; background: #1a243a; }
+  .g-stage.dragging { opacity: 0.4; }
+  .g-stage.drop-before { box-shadow: inset 3px 0 0 #3b82f6; }
+  .g-stage.drop-after  { box-shadow: inset -3px 0 0 #3b82f6; }
+
+  /* Step header cell */
+  .g-step {
+    background: #141414; border: 1px solid #2a2a2a; border-bottom: none;
+    display: flex; align-items: center; gap: 4px; padding: 4px 6px; min-height: 34px;
+    cursor: grab;
+  }
+  .g-step .step-name { font-size: 12px; color: #999; flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-step .step-name:hover { background: #222; color: #e0e0e0; }
+  .g-step input.rename-input { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 12px; padding: 1px 4px; outline: none; min-width: 0; }
+  .g-step .step-remove { opacity: 0; color: #555; cursor: pointer; font-size: 12px; padding: 0 3px; border-radius: 3px; }
+  .g-step:hover .step-remove { opacity: 1; }
+  .g-step .step-remove:hover { color: #f43f5e; background: #2a1a1e; }
+  .g-step.dragging { opacity: 0.35; }
+  .g-step.drop-before { box-shadow: inset 3px 0 0 #3b82f6; }
+  .g-step.drop-after  { box-shadow: inset -3px 0 0 #3b82f6; }
+
+  /* Slice label cell (sticky left) */
+  .g-slice-label {
+    background: #161616; position: sticky; left: 0; z-index: 3;
+    border-right: 1px solid #2a2a2a; border-bottom: 1px solid #222;
+    display: flex; align-items: center; padding: 0 12px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #777;
+  }
+
+  /* Data cell */
+  .g-cell {
+    background: #111; border-right: 1px solid #1e1e1e; border-bottom: 1px solid #1e1e1e;
+    padding: 6px 7px; min-height: 56px; display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+  }
+  .g-cell:hover { background: #161616; }
+  .g-cell .element {
+    display: flex; align-items: flex-start; gap: 4px;
+    background: #1a1a1a; border: 1px solid #262626; border-radius: 4px; padding: 3px 5px;
+  }
+  .g-cell .element:hover { border-color: #333; background: #1e1e1e; }
+  .g-cell .element .el-text { flex: 1; font-size: 11.5px; color: #ccc; line-height: 1.35; cursor: text; word-break: break-word; white-space: pre-wrap; }
+  .g-cell .element .el-text:empty::before { content: '…'; color: #444; }
+  .g-cell .element input.el-edit { flex: 1; background: #2a2a2a; border: 1px solid #3b82f6; border-radius: 3px; color: #e0e0e0; font-size: 11.5px; padding: 1px 4px; outline: none; }
+  .g-cell .element .el-handle { color: #444; cursor: grab; font-size: 10px; line-height: 1.4; user-select: none; opacity: 0; }
+  .g-cell .element:hover .el-handle { opacity: 1; }
+  .g-cell .element .el-remove { color: #555; cursor: pointer; font-size: 11px; line-height: 1.4; opacity: 0; }
+  .g-cell .element:hover .el-remove { opacity: 1; }
+  .g-cell .element .el-remove:hover { color: #f43f5e; }
+  .g-cell .element.dragging { opacity: 0.35; }
+  .g-cell .add-element { align-self: flex-start; background: transparent; border: 1px dashed #2a2a2a; border-radius: 4px; color: #555; cursor: pointer; font-size: 11px; padding: 2px 7px; }
+  .g-cell .add-element:hover { border-color: #3b82f6; color: #60a5fa; }
+
+  /* Emotion cell */
+  .g-cell.emotion-cell { justify-content: center; }
+  .emo-dots { display: flex; gap: 5px; align-items: center; justify-content: center; }
+  .emo-dot { width: 14px; height: 14px; border-radius: 50%; background: #262626; cursor: pointer; border: 1px solid #333; }
+  .emo-dot.on { background: var(--emo, #3b82f6); border-color: var(--emo, #3b82f6); }
+  .emo-clear { font-size: 10px; color: #555; cursor: pointer; margin-left: 6px; }
+  .emo-clear:hover { color: #f43f5e; }
+
+  /* Empty states */
+  .empty-state { border: 2px dashed #2a2a2a; border-radius: 12px; padding: 50px 40px; text-align: center; margin: 24px; }
+  .empty-state p { font-size: 14px; color: #555; margin-bottom: 6px; }
+  .empty-state small { font-size: 12px; color: #3a3a3a; }
+  .empty-state .btn { margin-top: 14px; }
+
+  .sb-empty { padding: 10px 12px; font-size: 11px; color: #3a3a3a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Customer Journey</h1>
+  <span class="hint">Mapa podróży klienta · siatka etapów/kroków × slice'ów</span>
+  <span class="spacer"></span>
+  <button class="btn btn-primary btn-sm" id="btn-export">↓ Eksport PNG</button>
+</header>
+
+<main>
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-section-header">
+      Kategorie
+      <button class="btn-add" id="btn-add-category" title="Nowa kategoria">+</button>
+    </div>
+    <ul id="category-list" class="sb-list"></ul>
+
+    <div class="sidebar-section-header">
+      Persony
+      <button class="btn-add" id="btn-add-persona" title="Nowa persona">+</button>
+    </div>
+    <ul id="persona-list" class="sb-list"></ul>
+
+    <div class="sidebar-section-header">
+      Customer journeys
+      <button class="btn-add" id="btn-add-journey" title="Nowa CJ">+</button>
+    </div>
+    <ul id="journey-list" class="sb-list"></ul>
+  </div>
+
+  <div id="sidebar-resizer"></div>
+
+  <!-- MAIN PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <span id="panel-title">Customer journey</span>
+      <span class="count" id="step-count">0 kroków</span>
+    </div>
+    <div id="journey-meta" style="display:none"></div>
+    <div id="grid-scroll">
+      <div id="grid-empty" class="empty-state" style="display:none">
+        <p>Brak customer journey</p>
+        <small>Dodaj kategorię i pierwszą CJ, żeby zacząć mapować.</small>
+        <div><button class="btn btn-primary btn-sm" id="btn-empty-add">Dodaj customer journey</button></div>
+      </div>
+      <div id="grid"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'ux-customer-journey_v1';
+const LABEL_COL_W = 150;
+const STEP_COL_W  = 220;
+
+const SLICES = [
+  { key: 'action',     label: 'Działania klienta' },
+  { key: 'touchpoint', label: 'Touchpointy' },
+  { key: 'mindset',    label: 'Myśli / pytania' },
+  { key: 'emotion',    label: 'Emocje' },
+  { key: 'pain-point', label: 'Pain points' },
+  { key: 'idea',       label: 'Pomysły' },
+  { key: 'insight',    label: 'Insighty' },
+];
+const EMOTION_KEY = 'emotion';
+const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1..5 low→high
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  categories: [],
+  personas: [],
+  activeCategory: 0,
+  activeJourney: 0,
+  sidebarWidth: 220,
+  nextId: 1,
+};
+
+function uid() { return state.nextId++; }
+
+function freshCells() {
+  const c = {};
+  SLICES.forEach(s => c[s.key] = (s.key === EMOTION_KEY) ? null : []);
+  return c;
+}
+function newStep(name) { return { id: uid(), name, cells: freshCells() }; }
+function newStage(name) { return { id: uid(), name, steps: [newStep('Krok 1')] }; }
+function newJourney(title, personaId) {
+  return { id: uid(), personaId: personaId ?? null, title, description: '', expectations: '', stages: [newStage('Etap 1')] };
+}
+function newCategory(name) { return { id: uid(), name, journeys: [] }; }
+function newPersona(name) { return { id: uid(), name }; }
+
+function currentCategory() { return state.categories[state.activeCategory] ?? null; }
+function currentJourney() { return currentCategory()?.journeys[state.activeJourney] ?? null; }
+function personaName(id) { return state.personas.find(p => p.id === id)?.name ?? '—'; }
+
+function ensureActiveIndicesValid() {
+  if (state.categories.length === 0) return;
+  state.activeCategory = Math.max(0, Math.min(state.activeCategory, state.categories.length - 1));
+  const cat = currentCategory();
+  if (cat) state.activeJourney = Math.max(0, Math.min(state.activeJourney, cat.journeys.length - 1));
+}
+
+function findStage(stageId) {
+  const j = currentJourney(); if (!j) return null;
+  for (let si = 0; si < j.stages.length; si++) {
+    if (j.stages[si].id === stageId) return { stage: j.stages[si], stageIndex: si };
+  }
+  return null;
+}
+function findStep(stepId) {
+  const j = currentJourney(); if (!j) return null;
+  for (let si = 0; si < j.stages.length; si++) {
+    const st = j.stages[si];
+    for (let ti = 0; ti < st.steps.length; ti++) {
+      if (st.steps[ti].id === stepId) return { stage: st, step: st.steps[ti], stageIndex: si, stepIndex: ti };
+    }
+  }
+  return null;
+}
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) { showStorageError(); }
+}
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    Object.assign(state, parsed);
+    // normalize any missing cells/slices on loaded data
+    state.categories.forEach(cat => cat.journeys.forEach(j => j.stages.forEach(st => st.steps.forEach(step => {
+      const c = step.cells || (step.cells = {});
+      SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
+    }))));
+  } catch (e) { /* corrupt — keep defaults */ }
+}
+
+let _storageErrTimer = null;
+function showStorageError() {
+  let el = document.getElementById('storage-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'storage-error';
+    el.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#2a1a1e;color:#fda4af;border:1px solid #5b2230;border-radius:8px;padding:10px 16px;font-size:12px;z-index:9999;max-width:90vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = 'Nie udało się zapisać — prawdopodobnie pełny localStorage. Usuń niepotrzebne dane.';
+  clearTimeout(_storageErrTimer);
+  _storageErrTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+  el.style.display = '';
+}
+
+// ─── Category CRUD ────────────────────────────────────────────────────────────
+function createCategory(name) {
+  const cat = newCategory(name || `Kategoria ${state.categories.length + 1}`);
+  state.categories.push(cat);
+  state.activeCategory = state.categories.length - 1;
+  state.activeJourney = 0;
+  _pendingRename = 'category';
+  save(); render();
+}
+function switchCategory(i) { state.activeCategory = i; state.activeJourney = 0; save(); render(); }
+function renameCategory(i, name) {
+  const cat = state.categories[i]; if (!cat) return;
+  cat.name = name.trim() || `Kategoria ${i + 1}`;
+  save(); renderCategoryList();
+}
+function removeCategory(i) {
+  state.categories.splice(i, 1);
+  if (state.categories.length === 0) state.categories.push(newCategory('Cash loan'));
+  ensureActiveIndicesValid();
+  save(); render();
+}
+function moveCategory(from, to) {
+  if (from === to || to < 0 || to >= state.categories.length) return;
+  const [it] = state.categories.splice(from, 1);
+  state.categories.splice(to, 0, it);
+  if (state.activeCategory === from) state.activeCategory = to;
+  save(); render();
+}
+
+// ─── Persona CRUD ─────────────────────────────────────────────────────────────
+function createPersona(name) {
+  state.personas.push(newPersona(name || `Persona ${state.personas.length + 1}`));
+  _pendingRename = 'persona';
+  save(); render();
+}
+function renamePersona(i, name) {
+  const p = state.personas[i]; if (!p) return;
+  p.name = name.trim() || `Persona ${i + 1}`;
+  save(); renderPersonaList(); renderJourneyMeta();
+}
+function removePersona(i) {
+  const pid = state.personas[i]?.id;
+  state.personas.splice(i, 1);
+  // journeys referencing it just render as '—' (no blocking)
+  save(); render();
+}
+function movePersona(from, to) {
+  if (from === to || to < 0 || to >= state.personas.length) return;
+  const [it] = state.personas.splice(from, 1);
+  state.personas.splice(to, 0, it);
+  save(); render();
+}
+
+// ─── Journey CRUD ─────────────────────────────────────────────────────────────
+function createJourney(title) {
+  let cat = currentCategory();
+  if (!cat) { createCategory('Cash loan'); cat = currentCategory(); }
+  const personaId = state.personas[0]?.id ?? null;
+  cat.journeys.push(newJourney(title || `CJ ${cat.journeys.length + 1}`, personaId));
+  state.activeJourney = cat.journeys.length - 1;
+  _pendingRename = 'journey';
+  save(); render();
+}
+function switchJourney(i) { state.activeJourney = i; save(); render(); }
+function removeJourney(i) {
+  const cat = currentCategory(); if (!cat) return;
+  cat.journeys.splice(i, 1);
+  ensureActiveIndicesValid();
+  save(); render();
+}
+function moveJourney(from, to) {
+  const cat = currentCategory(); if (!cat) return;
+  if (from === to || to < 0 || to >= cat.journeys.length) return;
+  const [it] = cat.journeys.splice(from, 1);
+  cat.journeys.splice(to, 0, it);
+  save(); render();
+}
+function setJourneyField(field, value) {
+  const j = currentJourney(); if (!j) return;
+  j[field] = value;
+  save();
+  if (field === 'title') renderSidebarJourneyTitle();
+}
+
+// ─── Stage CRUD ───────────────────────────────────────────────────────────────
+function addStage() {
+  const j = currentJourney(); if (!j) return;
+  const st = newStage(`Etap ${j.stages.length + 1}`);
+  j.stages.push(st);
+  _pendingStageRename = st.id;
+  save(); renderGrid();
+}
+function renameStage(stageId, name) {
+  const r = findStage(stageId); if (!r) return;
+  r.stage.name = name.trim() || `Etap ${r.stageIndex + 1}`;
+  save(); renderGrid();
+}
+function removeStage(stageId) {
+  const j = currentJourney(); if (!j) return;
+  const idx = j.stages.findIndex(s => s.id === stageId); if (idx < 0) return;
+  j.stages.splice(idx, 1);
+  if (j.stages.length === 0) j.stages.push(newStage('Etap 1'));
+  save(); renderGrid();
+}
+function moveStage(from, to) {
+  const j = currentJourney(); if (!j) return;
+  if (from === to || to < 0 || to >= j.stages.length) return;
+  const [it] = j.stages.splice(from, 1);
+  j.stages.splice(to, 0, it);
+  save(); renderGrid();
+}
+
+// ─── Step CRUD ────────────────────────────────────────────────────────────────
+function addStep(stageId) {
+  const r = findStage(stageId); if (!r) return;
+  const step = newStep(`Krok ${r.stage.steps.length + 1}`);
+  r.stage.steps.push(step);
+  _pendingStepRename = step.id;
+  save(); renderGrid();
+}
+function renameStep(stepId, name) {
+  const r = findStep(stepId); if (!r) return;
+  r.step.name = name.trim() || `Krok ${r.stepIndex + 1}`;
+  save(); renderGrid();
+}
+function removeStep(stepId) {
+  const r = findStep(stepId); if (!r) return;
+  r.stage.steps.splice(r.stepIndex, 1);
+  if (r.stage.steps.length === 0) r.stage.steps.push(newStep('Krok 1'));
+  save(); renderGrid();
+}
+// Move a step (origin stage + index) to (targetStageId, targetIndex)
+function moveStep(fromStageId, fromIndex, toStageId, toIndex) {
+  const j = currentJourney(); if (!j) return;
+  const fromStage = j.stages.find(s => s.id === fromStageId);
+  const toStage = j.stages.find(s => s.id === toStageId);
+  if (!fromStage || !toStage) return;
+  if (fromIndex < 0 || fromIndex >= fromStage.steps.length) return;
+  const [step] = fromStage.steps.splice(fromIndex, 1);
+  // adjust target index if removing shifted it in same stage
+  let ti = toIndex;
+  if (fromStage === toStage && fromIndex < ti) ti--;
+  ti = Math.max(0, Math.min(ti, toStage.steps.length));
+  toStage.steps.splice(ti, 0, step);
+  save(); renderGrid();
+}
+
+// ─── Element CRUD ─────────────────────────────────────────────────────────────
+function addElement(stepId, slice) {
+  const r = findStep(stepId); if (!r) return;
+  const list = r.step.cells[slice];
+  if (!Array.isArray(list)) return;
+  const el = { id: uid(), text: '' };
+  list.push(el);
+  _pendingElementEdit = { stepId, slice, elementId: el.id };
+  save(); renderGrid();
+}
+function updateElement(stepId, slice, elementId, text) {
+  const r = findStep(stepId); if (!r) return;
+  const el = r.step.cells[slice]?.find(e => e.id === elementId);
+  if (!el) return;
+  el.text = text;
+  save();
+}
+function removeElement(stepId, slice, elementId) {
+  const r = findStep(stepId); if (!r) return;
+  const list = r.step.cells[slice]; if (!Array.isArray(list)) return;
+  const idx = list.findIndex(e => e.id === elementId); if (idx < 0) return;
+  list.splice(idx, 1);
+  save(); renderGrid();
+}
+function moveElement(stepId, slice, from, to) {
+  const r = findStep(stepId); if (!r) return;
+  const list = r.step.cells[slice]; if (!Array.isArray(list)) return;
+  if (from === to || from < 0 || from >= list.length || to < 0 || to >= list.length) return;
+  const [it] = list.splice(from, 1);
+  list.splice(to, 0, it);
+  save(); renderGrid();
+}
+function setEmotion(stepId, value) {
+  const r = findStep(stepId); if (!r) return;
+  r.step.cells[EMOTION_KEY] = (r.step.cells[EMOTION_KEY] === value) ? null : value;
+  save(); renderGrid();
+}
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+const categoryList  = document.getElementById('category-list');
+const personaList   = document.getElementById('persona-list');
+const journeyList   = document.getElementById('journey-list');
+const journeyMeta   = document.getElementById('journey-meta');
+const panelTitle    = document.getElementById('panel-title');
+const stepCountEl   = document.getElementById('step-count');
+const gridEl        = document.getElementById('grid');
+const gridEmpty     = document.getElementById('grid-empty');
+const btnExport     = document.getElementById('btn-export');
+const btnEmptyAdd   = document.getElementById('btn-empty-add');
+const sidebar       = document.getElementById('sidebar');
+const sidebarResizer= document.getElementById('sidebar-resizer');
+
+// ─── Inline edit helper ───────────────────────────────────────────────────────
+function startEdit(spanEl, current, onCommit) {
+  const input = document.createElement('input');
+  input.className = 'rename-input';
+  input.value = current;
+  spanEl.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  const commit = () => { if (done) return; done = true; onCommit(input.value); };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { done = true; onCommit(current); input.blur(); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+// element text editor (textarea-like single input)
+function startElementEdit(textSpan, stepId, slice, elementId, current) {
+  const input = document.createElement('input');
+  input.className = 'el-edit';
+  input.value = current;
+  textSpan.replaceWith(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = (val) => {
+    if (done) return; done = true;
+    if (val.trim() === '') { removeElement(stepId, slice, elementId); }   // empty → remove (re-renders)
+    else { updateElement(stepId, slice, elementId, val); renderGrid(); }
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(input.value); }
+    if (e.key === 'Escape') { finish(current); }
+  });
+  input.addEventListener('blur', () => finish(input.value));
+}
+
+// ─── Pending edit flags (focus after re-render) ───────────────────────────────
+let _pendingRename = null;        // 'category' | 'persona' | 'journey'
+let _pendingStageRename = null;   // stageId
+let _pendingStepRename = null;    // stepId
+let _pendingElementEdit = null;   // {stepId, slice, elementId}
+
+// ─── Render coordinator ───────────────────────────────────────────────────────
+function render() {
+  renderCategoryList();
+  renderPersonaList();
+  renderJourneyList();
+  renderMain();
+}
+
+// ─── Sidebar: categories ──────────────────────────────────────────────────────
+function renderCategoryList() {
+  categoryList.innerHTML = '';
+  state.categories.forEach((cat, i) => {
+    const li = mkSidebarItem({
+      name: cat.name,
+      active: i === state.activeCategory,
+      sub: `${cat.journeys.length} CJ`,
+      draggable: true,
+      onActivate: () => switchCategory(i),
+      onRename: v => renameCategory(i, v),
+      onRemove: () => removeCategory(i),
+      onMove: (from, to) => moveCategory(from, to),
+      dragKind: 'category',
+    });
+    categoryList.appendChild(li);
+  });
+  if (state.categories.length === 0) categoryList.innerHTML = '<li class="sb-empty">Brak kategorii — dodaj pierwszą (+).</li>';
+  applyPendingRename('category', categoryList, state.activeCategory, v => renameCategory(state.activeCategory, v));
+}
+
+// ─── Sidebar: personas ────────────────────────────────────────────────────────
+function renderPersonaList() {
+  personaList.innerHTML = '';
+  state.personas.forEach((p, i) => {
+    const li = mkSidebarItem({
+      name: p.name,
+      active: false,
+      draggable: true,
+      onActivate: () => {},
+      onRename: v => renamePersona(i, v),
+      onRemove: () => removePersona(i),
+      onMove: (from, to) => movePersona(from, to),
+      dragKind: 'persona',
+    });
+    personaList.appendChild(li);
+  });
+  if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">Brak person — dodaj (+).</li>';
+}
+
+// ─── Sidebar: journeys ────────────────────────────────────────────────────────
+function renderJourneyList() {
+  journeyList.innerHTML = '';
+  const cat = currentCategory();
+  if (!cat || cat.journeys.length === 0) {
+    journeyList.innerHTML = '<li class="sb-empty">Brak CJ w tej kategorii — dodaj (+).</li>';
+    return;
+  }
+  cat.journeys.forEach((j, i) => {
+    const li = mkSidebarItem({
+      name: j.title,
+      active: i === state.activeJourney,
+      sub: `${personaName(j.personaId)}${j.description ? ' · ' + j.description : ''}`,
+      draggable: true,
+      onActivate: () => switchJourney(i),
+      onRename: v => { renameJourneyInline(i, v); },
+      onRemove: () => removeJourney(i),
+      onMove: (from, to) => moveJourney(from, to),
+      dragKind: 'journey',
+    });
+    journeyList.appendChild(li);
+  });
+  applyPendingRename('journey', journeyList, state.activeJourney, v => renameJourneyInline(state.activeJourney, v));
+}
+function renameJourneyInline(i, v) {
+  const cat = currentCategory(); if (!cat) return;
+  const j = cat.journeys[i]; if (!j) return;
+  j.title = v.trim() || `CJ ${i + 1}`;
+  save(); renderJourneyList(); renderJourneyMeta();
+}
+function renderSidebarJourneyTitle() { renderJourneyList(); }
+
+// generic sidebar item builder (mirrors image-slicer)
+function mkSidebarItem({ name, active, sub, draggable, onActivate, onRename, onRemove, onMove, dragKind }) {
+  const li = document.createElement('li');
+  li.className = 'sb-item' + (active ? ' active' : '');
+  li.draggable = !!draggable;
+
+  const handle = document.createElement('span');
+  handle.className = 'drag-handle';
+  handle.textContent = '⠿';
+  handle.addEventListener('mousedown', e => e.stopPropagation());
+
+  const main = document.createElement('div');
+  main.className = 'item-main';
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'item-name';
+  nameSpan.textContent = name;
+  nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+  main.appendChild(nameSpan);
+  if (sub) {
+    const subSpan = document.createElement('span');
+    subSpan.className = 'item-sub';
+    subSpan.textContent = sub;
+    main.appendChild(subSpan);
+  }
+
+  const editBtn = document.createElement('span');
+  editBtn.className = 'item-edit';
+  editBtn.textContent = '✎';
+  editBtn.title = 'Zmień nazwę';
+  editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+
+  const removeBtn = document.createElement('span');
+  removeBtn.className = 'item-remove';
+  removeBtn.textContent = '×';
+  removeBtn.title = 'Usuń';
+  removeBtn.addEventListener('click', e => { e.stopPropagation(); onRemove(); });
+
+  // drag reorder
+  li.addEventListener('dragstart', e => {
+    sidebarDrag = { kind: dragKind, from: Array.from(li.parentElement.children).indexOf(li) };
+    li.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+  li.addEventListener('dragend', () => {
+    sidebarDrag = null;
+    li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('dragging', 'drag-over-above', 'drag-over-below'));
+  });
+  li.addEventListener('dragover', e => {
+    if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
+    e.preventDefault();
+    const rect = li.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('drag-over-above', 'drag-over-below'));
+    li.classList.add(e.clientY < mid ? 'drag-over-above' : 'drag-over-below');
+  });
+  li.addEventListener('drop', e => {
+    if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
+    e.preventDefault(); e.stopPropagation();
+    const rect = li.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    let to = Array.from(li.parentElement.children).indexOf(li);
+    if (e.clientY >= mid) to++;
+    if (sidebarDrag.from < to) to--;
+    onMove(sidebarDrag.from, to);
+  });
+
+  li.appendChild(handle);
+  li.appendChild(main);
+  li.appendChild(editBtn);
+  li.appendChild(removeBtn);
+  li.addEventListener('click', () => onActivate());
+  return li;
+}
+let sidebarDrag = null;
+
+function applyPendingRename(kind, listEl, activeIdx, renameFn) {
+  if (_pendingRename !== kind) return;
+  _pendingRename = null;
+  const item = listEl.children[activeIdx];
+  const span = item?.querySelector('.item-name');
+  if (span) startEdit(span, span.textContent, renameFn);
+}
+
+// ─── Main panel: meta + grid ──────────────────────────────────────────────────
+function renderMain() {
+  const j = currentJourney();
+  if (!j) {
+    journeyMeta.style.display = 'none';
+    gridEl.style.display = 'none';
+    gridEmpty.style.display = '';
+    panelTitle.textContent = 'Customer journey';
+    stepCountEl.textContent = '0 kroków';
+    btnExport.disabled = true;
+    return;
+  }
+  btnExport.disabled = false;
+  gridEmpty.style.display = 'none';
+  gridEl.style.display = '';
+  panelTitle.textContent = j.title;
+  renderJourneyMeta();
+  renderGrid();
+}
+
+function renderJourneyMeta() {
+  const j = currentJourney();
+  if (!j) { journeyMeta.style.display = 'none'; return; }
+  journeyMeta.style.display = '';
+  journeyMeta.innerHTML = '';
+
+  const row1 = document.createElement('div');
+  row1.className = 'meta-row';
+
+  const title = document.createElement('input');
+  title.className = 'title-input';
+  title.value = j.title;
+  title.placeholder = 'Tytuł customer journey';
+  title.addEventListener('input', () => setJourneyField('title', title.value));
+  title.addEventListener('change', () => { setJourneyField('title', title.value.trim() || 'CJ'); });
+  row1.appendChild(title);
+
+  const personaWrap = document.createElement('div');
+  personaWrap.style.display = 'flex'; personaWrap.style.flexDirection = 'column'; personaWrap.style.gap = '2px';
+  const plab = document.createElement('span'); plab.className = 'field-label'; plab.textContent = 'Persona';
+  const psel = document.createElement('select');
+  const noneOpt = document.createElement('option'); noneOpt.value = ''; noneOpt.textContent = '— brak —'; psel.appendChild(noneOpt);
+  state.personas.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o); });
+  psel.value = j.personaId ?? '';
+  psel.addEventListener('change', () => { j.personaId = psel.value ? Number(psel.value) : null; save(); renderJourneyList(); });
+  personaWrap.appendChild(plab); personaWrap.appendChild(psel);
+  row1.appendChild(personaWrap);
+
+  journeyMeta.appendChild(row1);
+
+  const row2 = document.createElement('div');
+  row2.className = 'meta-row';
+  const dWrap = mkField('Scenariusz / opis', j.description, v => { j.description = v; save(); renderJourneyList(); });
+  const eWrap = mkField('Oczekiwania', j.expectations, v => { j.expectations = v; save(); });
+  row2.appendChild(dWrap); row2.appendChild(eWrap);
+  journeyMeta.appendChild(row2);
+
+  // toolbar: add stage
+  const row3 = document.createElement('div');
+  row3.className = 'meta-row';
+  const addStageBtn = document.createElement('button');
+  addStageBtn.className = 'btn btn-ghost btn-sm';
+  addStageBtn.textContent = '+ Etap';
+  addStageBtn.addEventListener('click', addStage);
+  row3.appendChild(addStageBtn);
+  journeyMeta.appendChild(row3);
+}
+
+function mkField(label, value, onChange) {
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '2px'; wrap.style.flex = '1'; wrap.style.minWidth = '160px';
+  const lab = document.createElement('span'); lab.className = 'field-label'; lab.textContent = label;
+  const inp = document.createElement('input'); inp.className = 'field-input'; inp.value = value || '';
+  inp.addEventListener('input', () => onChange(inp.value));
+  wrap.appendChild(lab); wrap.appendChild(inp);
+  return wrap;
+}
+
+// ─── Grid rendering ───────────────────────────────────────────────────────────
+function renderGrid() {
+  const j = currentJourney();
+  gridEl.innerHTML = '';
+  if (!j) return;
+
+  // flatten steps in order with column indices
+  const flat = []; // {stageIndex, stepIndex, stage, step}
+  j.stages.forEach((st, si) => st.steps.forEach((step, ti) => flat.push({ stageIndex: si, stepIndex: ti, stage: st, step })));
+  const N = flat.length;
+  const stepCount = N;
+  stepCountEl.textContent = stepCount === 1 ? '1 krok' : `${stepCount} kroków`;
+
+  if (N === 0) {
+    gridEl.style.display = 'none';
+    return;
+  }
+  gridEl.style.display = '';
+  gridEl.style.gridTemplateColumns = `${LABEL_COL_W}px repeat(${N}, ${STEP_COL_W}px)`;
+
+  const STAGE_ROW = 1, STEP_ROW = 2, SLICE_BASE = 3;
+
+  // Row 1: corner + stages
+  const corner1 = document.createElement('div');
+  corner1.className = 'g-corner';
+  place(corner1, STAGE_ROW, 1);
+  gridEl.appendChild(corner1);
+
+  j.stages.forEach((st, si) => {
+    // columns spanned: first..last step column of this stage
+    let firstFlat = -1, lastFlat = -1;
+    flat.forEach((f, i) => { if (f.stage === st) { if (firstFlat === -1) firstFlat = i; lastFlat = i; } });
+    const startCol = 2 + firstFlat;
+    const endCol = 2 + lastFlat;
+    const cell = document.createElement('div');
+    cell.className = 'g-stage';
+    cell.dataset.stageId = st.id;
+    place(cell, STAGE_ROW, startCol, endCol);
+
+    const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.textContent = '⠿';
+    const nameSpan = document.createElement('span'); nameSpan.className = 'stage-name'; nameSpan.textContent = st.name;
+    nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, st.name, v => renameStage(st.id, v)); });
+    const addStepBtn = document.createElement('button'); addStepBtn.className = 'stage-add-step'; addStepBtn.textContent = '+ krok'; addStepBtn.title = 'Dodaj krok do etapu';
+    addStepBtn.addEventListener('click', e => { e.stopPropagation(); addStep(st.id); });
+
+    // stage drag reorder
+    cell.draggable = true;
+    cell.addEventListener('dragstart', e => { gridDrag = { kind: 'stage', from: si }; cell.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
+    cell.addEventListener('dragend', () => { gridDrag = null; gridEl.querySelectorAll('.g-stage').forEach(el => el.classList.remove('dragging', 'drop-before', 'drop-after')); });
+    cell.addEventListener('dragover', e => {
+      if (!gridDrag || gridDrag.kind !== 'stage') return;
+      e.preventDefault();
+      gridEl.querySelectorAll('.g-stage').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+      const rect = cell.getBoundingClientRect(); const mid = rect.left + rect.width / 2;
+      cell.classList.add(e.clientX < mid ? 'drop-before' : 'drop-after');
+    });
+    cell.addEventListener('drop', e => {
+      if (!gridDrag || gridDrag.kind !== 'stage') return;
+      e.preventDefault();
+      const rect = cell.getBoundingClientRect(); const mid = rect.left + rect.width / 2;
+      let to = si + (e.clientX >= mid ? 1 : 0);
+      if (gridDrag.from < to) to--;
+      moveStage(gridDrag.from, to);
+    });
+
+    cell.appendChild(handle); cell.appendChild(nameSpan); cell.appendChild(addStepBtn);
+    gridEl.appendChild(cell);
+  });
+
+  // Row 2: corner + step headers
+  const corner2 = document.createElement('div');
+  corner2.className = 'g-corner row-step'; corner2.textContent = 'Krok';
+  place(corner2, STEP_ROW, 1);
+  gridEl.appendChild(corner2);
+
+  flat.forEach((f, col) => {
+    const colNum = 2 + col;
+    const step = f.step;
+    const cell = document.createElement('div');
+    cell.className = 'g-step';
+    cell.dataset.stepId = step.id;
+    place(cell, STEP_ROW, colNum);
+
+    const nameSpan = document.createElement('span'); nameSpan.className = 'step-name'; nameSpan.textContent = step.name;
+    nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, step.name, v => renameStep(step.id, v)); });
+    const removeBtn = document.createElement('span'); removeBtn.className = 'step-remove'; removeBtn.textContent = '×'; removeBtn.title = 'Usuń krok';
+    removeBtn.addEventListener('click', e => { e.stopPropagation(); removeStep(step.id); });
+
+    // step drag reorder (within/between stages)
+    cell.draggable = true;
+    cell.addEventListener('dragstart', e => { gridDrag = { kind: 'step', fromStageId: f.stage.id, fromIndex: f.stepIndex }; cell.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
+    cell.addEventListener('dragend', () => { gridDrag = null; gridEl.querySelectorAll('.g-step').forEach(el => el.classList.remove('dragging', 'drop-before', 'drop-after')); });
+    cell.addEventListener('dragover', e => {
+      if (!gridDrag || gridDrag.kind !== 'step') return;
+      e.preventDefault();
+      gridEl.querySelectorAll('.g-step').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+      const rect = cell.getBoundingClientRect(); const mid = rect.left + rect.width / 2;
+      cell.classList.add(e.clientX < mid ? 'drop-before' : 'drop-after');
+    });
+    cell.addEventListener('drop', e => {
+      if (!gridDrag || gridDrag.kind !== 'step') return;
+      e.preventDefault();
+      const rect = cell.getBoundingClientRect(); const mid = rect.left + rect.width / 2;
+      let toIndex = f.stepIndex + (e.clientX >= mid ? 1 : 0);
+      moveStep(gridDrag.fromStageId, gridDrag.fromIndex, f.stage.id, toIndex);
+    });
+
+    cell.appendChild(nameSpan); cell.appendChild(removeBtn);
+    gridEl.appendChild(cell);
+
+    if (_pendingStepRename === step.id) {
+      _pendingStepRename = null;
+      startEdit(nameSpan, step.name, v => renameStep(step.id, v));
+    }
+  });
+
+  // Rows 3..: slices
+  SLICES.forEach((slice, sIdx) => {
+    const row = SLICE_BASE + sIdx;
+    const label = document.createElement('div');
+    label.className = 'g-slice-label';
+    label.textContent = slice.label;
+    place(label, row, 1);
+    gridEl.appendChild(label);
+
+    flat.forEach((f, col) => {
+      const colNum = 2 + col;
+      const step = f.step;
+      const cellEl = document.createElement('div');
+      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '');
+      place(cellEl, row, colNum);
+
+      if (slice.key === EMOTION_KEY) {
+        cellEl.appendChild(buildEmotion(step));
+      } else {
+        cellEl.appendChild(buildCellElements(step, slice.key));
+      }
+      gridEl.appendChild(cellEl);
+    });
+  });
+}
+
+let gridDrag = null;
+
+function place(el, row, colStart, colEnd) {
+  el.style.gridRow = String(row);
+  el.style.gridColumn = colEnd != null ? `${colStart} / ${colEnd + 1}` : String(colStart);
+}
+
+function buildCellElements(step, slice) {
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '4px'; wrap.style.width = '100%';
+  const list = step.cells[slice] || [];
+  list.forEach((el, idx) => {
+    const row = document.createElement('div');
+    row.className = 'element';
+    row.draggable = true;
+
+    const handle = document.createElement('span'); handle.className = 'el-handle'; handle.textContent = '⠿';
+    const text = document.createElement('span'); text.className = 'el-text'; text.textContent = el.text;
+    text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, el.text); });
+    const rm = document.createElement('span'); rm.className = 'el-remove'; rm.textContent = '×'; rm.title = 'Usuń element';
+    rm.addEventListener('click', ev => { ev.stopPropagation(); removeElement(step.id, slice, el.id); });
+
+    row.addEventListener('dragstart', ev => { elementDrag = { stepId: step.id, slice, from: idx }; row.classList.add('dragging'); ev.stopPropagation(); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', ''); });
+    row.addEventListener('dragend', () => { elementDrag = null; row.classList.remove('dragging'); wrap.querySelectorAll('.element').forEach(e => e.classList.remove('dragging')); });
+    row.addEventListener('dragover', ev => {
+      if (!elementDrag || elementDrag.stepId !== step.id || elementDrag.slice !== slice) return;
+      ev.preventDefault(); ev.stopPropagation();
+    });
+    row.addEventListener('drop', ev => {
+      if (!elementDrag || elementDrag.stepId !== step.id || elementDrag.slice !== slice) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const to = idx;
+      moveElement(elementDrag.stepId, elementDrag.slice, elementDrag.from, to);
+    });
+
+    row.appendChild(handle); row.appendChild(text); row.appendChild(rm);
+    wrap.appendChild(row);
+
+    if (_pendingElementEdit && _pendingElementEdit.stepId === step.id && _pendingElementEdit.slice === slice && _pendingElementEdit.elementId === el.id) {
+      _pendingElementEdit = null;
+      // defer so input replaces after append
+      setTimeout(() => startElementEdit(text, step.id, slice, el.id, el.text), 0);
+    }
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-element'; addBtn.textContent = '+ element';
+  addBtn.addEventListener('click', e => { e.stopPropagation(); addElement(step.id, slice); });
+  wrap.appendChild(addBtn);
+  return wrap;
+}
+let elementDrag = null;
+
+function buildEmotion(step) {
+  const wrap = document.createElement('div');
+  wrap.className = 'emo-dots';
+  const val = step.cells[EMOTION_KEY];
+  for (let v = 1; v <= 5; v++) {
+    const dot = document.createElement('div');
+    dot.className = 'emo-dot' + (val != null && v <= val ? ' on' : '');
+    if (val != null && v <= val) dot.style.setProperty('--emo', EMO_COLORS[val - 1]);
+    dot.title = `${v}/5`;
+    dot.addEventListener('click', e => { e.stopPropagation(); setEmotion(step.id, v); });
+    wrap.appendChild(dot);
+  }
+  if (val != null) {
+    const clr = document.createElement('span'); clr.className = 'emo-clear'; clr.textContent = '×'; clr.title = 'Wyczyść';
+    clr.addEventListener('click', e => { e.stopPropagation(); setEmotion(step.id, val); }); // toggles off (same value → null)
+    wrap.appendChild(clr);
+  }
+  return wrap;
+}
+
+// ─── Export PNG ───────────────────────────────────────────────────────────────
+function safeFilename(name) { return (name || 'unnamed').trim().replace(/[/\\:*?"<>|]/g, '_'); }
+
+function exportPng() {
+  const j = currentJourney(); if (!j) return;
+  const flat = [];
+  j.stages.forEach(st => st.steps.forEach(step => flat.push({ stage: st, step })));
+  if (flat.length === 0) return;
+
+  const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 140, colW = 200, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = font;
+
+  // measure row heights
+  function wrapLines(text, maxW) {
+    if (!text) return [];
+    const words = String(text).split(/\s+/);
+    const lines = []; let cur = '';
+    words.forEach(w => {
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+      else cur = test;
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  const sliceRows = SLICES.map(slice => {
+    let maxLines = 1;
+    flat.forEach(f => {
+      if (slice.key === EMOTION_KEY) { maxLines = Math.max(maxLines, 1); return; }
+      const list = f.step.cells[slice.key] || [];
+      let n = 0;
+      list.forEach(el => { n += Math.max(1, wrapLines(el.text, colW - 18).length); });
+      if (list.length === 0) n = 1;
+      maxLines = Math.max(maxLines, n);
+    });
+    return { slice, h: Math.max(34, maxLines * lineH + 14) };
+  });
+
+  const totalW = pad * 2 + labelW + colW * flat.length;
+  const totalH = pad * 2 + headerH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h, 0);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = totalW * dpr; canvas.height = totalH * dpr;
+  canvas.style.width = totalW + 'px'; canvas.style.height = totalH + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.font = font;
+
+  // background
+  ctx.fillStyle = '#111'; ctx.fillRect(0, 0, totalW, totalH);
+
+  const x0 = pad, y0 = pad;
+  // title
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
+  const persona = personaName(j.personaId);
+  ctx.fillText(`${j.title}  ·  ${persona}`, x0, y0 + 16);
+  ctx.font = font;
+
+  let y = y0 + headerH;
+  // stage band
+  j.stages.forEach(st => {
+    const first = flat.findIndex(f => f.stage === st);
+    const lasts = []; for (let i = 0; i < flat.length; i++) if (flat[i].stage === st) lasts.push(i);
+    const last = lasts[lasts.length - 1];
+    const x1 = x0 + labelW + first * colW;
+    const w = (last - first + 1) * colW;
+    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(x1, y, w, 0); // (stage drawn slim below step header)
+    ctx.fillStyle = '#ccc'; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(st.name, x1 + 8, y - 6);
+    ctx.font = font;
+  });
+
+  // step headers
+  flat.forEach((f, col) => {
+    const x1 = x0 + labelW + col * colW;
+    ctx.fillStyle = '#141414'; ctx.fillRect(x1, y, colW, stepHeaderH);
+    ctx.strokeStyle = '#222'; ctx.strokeRect(x1, y, colW, stepHeaderH);
+    ctx.fillStyle = '#999';
+    ctx.fillText(trunc(ctx, f.step.name, colW - 12), x1 + 7, y + 20);
+  });
+  // label corner
+  ctx.fillStyle = '#161616'; ctx.fillRect(x0, y, labelW, stepHeaderH);
+  ctx.strokeStyle = '#222'; ctx.strokeRect(x0, y, labelW, stepHeaderH);
+  ctx.fillStyle = '#555'; ctx.fillText('Krok', x0 + 8, y + 20);
+  y += stepHeaderH;
+
+  // slice rows
+  sliceRows.forEach(({ slice, h }) => {
+    // label
+    ctx.fillStyle = '#161616'; ctx.fillRect(x0, y, labelW, h);
+    ctx.strokeStyle = '#222'; ctx.strokeRect(x0, y, labelW, h);
+    ctx.fillStyle = '#777'; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(slice.label, x0 + 8, y + 17);
+    ctx.font = font;
+    // cells
+    flat.forEach((f, col) => {
+      const x1 = x0 + labelW + col * colW;
+      ctx.fillStyle = '#111'; ctx.fillRect(x1, y, colW, h);
+      ctx.strokeStyle = '#1e1e1e'; ctx.strokeRect(x1, y, colW, h);
+      if (slice.key === EMOTION_KEY) {
+        const v = f.step.cells[EMOTION_KEY];
+        if (v != null) {
+          ctx.fillStyle = EMO_COLORS[v - 1];
+          for (let k = 0; k < v; k++) {
+            ctx.beginPath(); ctx.arc(x1 + 12 + k * 16, y + h / 2, 5, 0, Math.PI * 2); ctx.fill();
+          }
+        } else { ctx.fillStyle = '#3a3a3a'; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
+      } else {
+        const list = f.step.cells[slice.key] || [];
+        let ty = y + 16;
+        list.forEach(el => {
+          const lines = wrapLines(el.text, colW - 18) || [''];
+          ctx.fillStyle = '#ccc';
+          lines.forEach(ln => { ctx.fillText(ln, x1 + 8, ty); ty += lineH; });
+          ty += 2;
+        });
+        if (list.length === 0) { ctx.fillStyle = '#3a3a3a'; ctx.fillText('—', x1 + 8, y + 17); }
+      }
+    });
+    y += h;
+  });
+
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${safeFilename(j.title)}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    btnExport.textContent = '✓ Zapisano';
+    setTimeout(() => { btnExport.textContent = '↓ Eksport PNG'; }, 1500);
+  }, 'image/png');
+}
+
+function trunc(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+// ─── Wiring ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-add-category').addEventListener('click', () => createCategory());
+document.getElementById('btn-add-persona').addEventListener('click', () => createPersona());
+document.getElementById('btn-add-journey').addEventListener('click', () => createJourney());
+btnEmptyAdd.addEventListener('click', () => {
+  if (!currentCategory()) createCategory('Cash loan');
+  createJourney();
+});
+btnExport.addEventListener('click', exportPng);
+
+document.addEventListener('paste', e => {
+  const t = e.clipboardData?.getData('text/plain');
+  if (!t || !t.trim()) return;
+  // no active cell concept yet; ignore paste-into-cell for MVP
+});
+
+// sidebar resize
+const SB_MIN = 160, SB_MAX = 420;
+sidebarResizer.addEventListener('mousedown', e => {
+  e.preventDefault();
+  const startX = e.clientX, startW = sidebar.offsetWidth;
+  sidebarResizer.classList.add('resizing');
+  function onMove(ev) {
+    const w = Math.min(SB_MAX, Math.max(SB_MIN, startW + ev.clientX - startX));
+    sidebar.style.width = w + 'px';
+  }
+  function onUp() {
+    sidebarResizer.classList.remove('resizing');
+    state.sidebarWidth = sidebar.offsetWidth;
+    save();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await load();
+  if (state.categories.length === 0) {
+    // seed a minimal example so the grid is immediately demoable
+    const cat = newCategory('Cash loan');
+    const persona = newPersona('Anna');
+    state.personas.push(persona);
+    const j = newJourney('Wniosek gotówkowy', persona.id);
+    j.description = 'Składanie wniosku o pożyczkę';
+    cat.journeys.push(j);
+    state.categories.push(cat);
+    save();
+  }
+  ensureActiveIndicesValid();
+  sidebar.style.width = (state.sidebarWidth || 220) + 'px';
+  render();
+})();
+</script>
+</body>
+</html>
