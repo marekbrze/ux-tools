@@ -54,9 +54,9 @@ Tokeny definiowane na `:root` (light) i nadpisywane w `[data-theme="dark"]`. Akt
 | `--border` | `#d0d7de` | `#2a2a2a` | bordery |
 | `--border-soft` | `#e5e7eb` | `#1e1e1e` | separatory komórek |
 | `--text` | `#1f2328` | `#e0e0e0` | tekst główny |
-| `--text-2` | `#57606a` | `#999` | tekst wtórny |
-| `--text-3` | `#6e7781` | `#777` | treść list |
-| `--text-4` | `#8c959f` | `#555` | etykiety sekcji, empty states |
+| `--text-2` | `#4b5563` | `#b9bfc6` | tekst wtórny |
+| `--text-3` | `#5c6670` | `#9aa0a6` | treść list |
+| `--text-4` | `#626a73` | `#8a9098` | etykiety sekcji, empty states |
 | `--accent` / `--accent-hover` | `#2563eb` / `#1d4ed8` | `#3b82f6` / `#2563eb` | primary, aktywne elementy, focus |
 | `--danger` | `#d1242f` | `#f43f5e` | akcje destrukcyjne |
 | `--chip` / `--chip-text` | `#eaecef` / `#57606a` | `#2a2a2a` / `#888` | liczniki, znaczniki |
