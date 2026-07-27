@@ -143,3 +143,35 @@ Narzędzie ma być **po angielsku** (użycie profesjonalne), **dostępne** (a11y
 3. **Angielski (wszystkie stringi)**: header hint, sidebar section headers → *Categories / Personas / Customer journeys*, tooltipy ✎/×/⠿ → *Rename / Remove / Drag*, journey meta → *Title / Persona / Scenario (description) / Expectations*, `+ Etap` → *+ Stage*, `+ krok` → *+ Step*, `+ element` → *+ element*, empty states, export → *Export PNG / ✓ Copied / ✗ Failed*, licznik → *N steps*. Slice labels → **Actions, Touchpoints, Mindset, Emotions, Pain points, Ideas, Insights**. Seeded example: kategoria *Cash loan*, persona *Anna*, CJ *Cash loan application*, etap *Stage 1*, krok *Step 1*.
 4. **a11y**: `<html lang="en">`; semantyczne `header`/`main`/`nav`; ikony-akcje (⠿ ✎ × + ☀/☾) jako `<button aria-label="…">`; ARIA w siatce: `#grid` → `role="grid"`, wiersze → `role="row"`, nagłówki kroków → `role="columnheader"`, etykiety slice'ów → `role="rowheader"`, komórki danych → `role="gridcell"`; widoczny `:focus-visible` ring na wszystkich interaktywnych; zachować Enter/Escape w inline-edycji.
 5. **Glossary w SPEC.md**: dopisz `theme` (`light`/`dark`/`auto`) jeśli go nie ma.
+
+### Change 2 — bug: low text contrast, esp. dark mode (2026-07-27)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟡 medium — treść główna (`--text`, `--text-2`) czytelna; niedoczytelne etykiety/listy/chipy/empty states. Bloker a11y dla WCAG AA.
+
+**Reproduction**
+1. Otwórz appkę, przełącz na dark (☀ → ☾).
+2. Czytaj: nagłówki sekcji sidebar (CATEGORIES, PERSONAS…), panel-header, field-labels w journey-meta, empty-state hinty, slice labels, tekst list CJ, liczniki (chip).
+**Expected**: cały tekst ≥ 4.5:1 (WCAG AA). **Actual**: tekst wtórny/marginalny 2.4–4.1:1 — ciężko czytać; light mode też 2.7–4.3:1 na etykietach.
+**Reliability**: za każdym razem, w obu motywach; dark gorzej.
+**Location**: definicje tokenów — `index.html:18-20,29` (light `:root`) i `index.html:47-49,58` (dark `[data-theme="dark"]`).
+
+**Root cause**
+**Class**: visual / a11y
+**Cause**: szare tokeny dla tekstu wtórnego/marginalnego (`--text-3`, `--text-4`) oraz `--chip-text` są zbyt blisko luminancji swoich tłów — poniżej WCAG AA 4.5:1. Najgorzej dark `--text-4 #555` = 2.4:1 na panelach (nagłówki sekcji, field-labels, empty states prawie nieczytelne). `--text-3 #777` ≈ 4.0:1, `--chip-text #888` = 4.05:1. Light `--text-4 #8c959f` ≈ 2.7–3.0:1, `--text-3 #6e7781` ≈ 4.1:1. Tekst główny i elementów (`--text`, `--text-2`) przechodzi.
+**Evidence** (zmierzone WGAG): dark `#555` on `#141414` = 2.47, on `#111` = 2.53; dark `#777` on `#141414` = 4.11; dark `#888`(chip) on `#2a2a2a` = 4.05; light `#8c959f` on `#fff` = 3.04, on `#f1f3f5` = 2.73; light `#6e7781` on `#f1f3f5` = 4.09. Spec intent: SPEC.md §Requirements→States („kontrast ≥ WCAG AA") + CLAUDE.md §2.1 („Kontrast ≥ WCAG AA w obu motywach").
+
+**Fix plan**
+- **Change**: podbij tokeny do wartości AA (zweryfikowane ≥4.5:1 na realnych tłach):
+  - Dark (`[data-theme="dark"]`, `index.html:47-49,58`): `--text-2: #b9bfc6` (z #999), `--text-3: #9aa0a6` (z #777), `--text-4: #8a9098` (z #555), `--chip-text: #a8aeb6` (z #888).
+  - Light (`:root`, `index.html:18-20`): `--text-2: #4b5563` (z #57606a), `--text-3: #5c6670` (z #6e7781), `--text-4: #626a73` (z #8c959f); `--chip-text` zostaw `#57606a` (5.4:1 OK).
+  - `--text` bez zmian (`#e0e0e0` / `#1f2328` — już AA).
+- **Spec impact**: none — bez zmiany zachowania; CLAUDE.md §2.1 już nakazuje AA, to doprowadza kod do zgodności.
+
+**Regression scope**
+- Zmiana tylko tokenów; dotyka każdej powierzchni używającej tych tokenów (nagłówki sekcji, panel-header, field-labels, slice labels, tekst list, chipy, empty states, hinty) — wszystkie staną się bardziej czytelne, brak regresji funkcjonalnej.
+- Zaktualizować też tabelę tokenów w CLAUDE.md §2.1 (kolumny light/dark dla `--text-2/3/4`), żeby design-system-doc zgadzał się z kodem i przyszłe apki dziedziczyły tokeny AA.
+
+**Build instructions for ux-build**
+- W `index.html`: podmień 4 wartości dark (L47-49, L58) i 3 wartości light (L18-20) na wartości AA powyżej.
+- W `CLAUDE.md` §2.1 tabela: zaktualizuj wiersze `--text-2/3/4` (kolumny light + dark) do nowych wartości.
+- Po zmianie: prze-weryfikuj kontrast ≥4.5:1 dla realnych par token×tło. (text-4 na panel-3/chip dotyczy tylko dekoracyjnych drag-handle `aria-hidden` — zwolnione; dla pełnego marginesu text-4 → #5c6670.)
