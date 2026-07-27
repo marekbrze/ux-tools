@@ -270,7 +270,10 @@
   <span class="hint">Customer journey map · stages / steps × slices</span>
   <span class="spacer"></span>
   <button class="btn btn-ghost btn-sm" id="btn-theme" aria-label="Switch theme" title="Switch theme">☀</button>
+  <button class="btn btn-ghost btn-sm" id="btn-import" aria-label="Import JSON" title="Import JSON (full DB or single journey)">↥ Import</button>
+  <button class="btn btn-ghost btn-sm" id="btn-export-json" aria-label="Export whole database as JSON" title="Export whole database as JSON">↧ Export JSON</button>
   <button class="btn btn-primary btn-sm" id="btn-export">↓ Export PNG</button>
+  <input type="file" id="import-file" accept="application/json,.json" style="display:none">
 </header>
 
 <main>
@@ -924,6 +927,13 @@ function renderJourneyMeta() {
   addStageBtn.textContent = '+ Stage';
   addStageBtn.addEventListener('click', addStage);
   row3.appendChild(addStageBtn);
+
+  const exportCJBtn = document.createElement('button');
+  exportCJBtn.className = 'btn btn-ghost btn-sm';
+  exportCJBtn.textContent = '↧ Export CJ';
+  exportCJBtn.title = 'Export this journey as JSON';
+  exportCJBtn.addEventListener('click', exportJourney);
+  row3.appendChild(exportCJBtn);
   journeyMeta.appendChild(row3);
 }
 
@@ -1326,6 +1336,128 @@ function trunc(ctx, text, maxW) {
   return t + '…';
 }
 
+// ─── Export / Import JSON ─────────────────────────────────────────────────────
+function dateStamp() {
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function exportDatabase() {
+  const data = { version: 1, kind: 'database', app: 'customer-journey',
+    categories: JSON.parse(JSON.stringify(state.categories)),
+    personas: JSON.parse(JSON.stringify(state.personas)) };
+  downloadJson(data, 'customer-journey-backup-' + dateStamp() + '.json');
+  flashToast('✓ Database exported');
+}
+function exportJourney() {
+  const j = currentJourney(); if (!j) return;
+  const persona = j.personaId != null ? { name: personaName(j.personaId) } : null;
+  const data = { version: 1, kind: 'journey', app: 'customer-journey',
+    journey: JSON.parse(JSON.stringify(j)), persona };
+  downloadJson(data, safeFilename(j.title) + '.json');
+  flashToast('✓ Journey exported');
+}
+
+function normalizeStep(step, idx) {
+  if (!step.name) step.name = `Step ${(idx ?? 0) + 1}`;
+  const c = step.cells || (step.cells = {});
+  SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
+}
+function normalizeJourney(j) {
+  if (!j || typeof j !== 'object') j = {};
+  if (!j.title) j.title = 'Imported journey';
+  if (j.description == null) j.description = '';
+  if (j.expectations == null) j.expectations = '';
+  if (!Array.isArray(j.stages)) j.stages = [];
+  j.stages.forEach((st, si) => {
+    if (!st.name) st.name = `Stage ${si + 1}`;
+    if (!Array.isArray(st.steps)) st.steps = [];
+    st.steps.forEach((step, ti) => normalizeStep(step, ti));
+  });
+}
+function regenElementIds(list) { if (Array.isArray(list)) list.forEach(e => { e.id = uid(); }); }
+function regenStep(step) { step.id = uid(); SLICES.forEach(s => { if (s.key !== EMOTION_KEY) regenElementIds(step.cells?.[s.key]); }); }
+function regenStage(st) { st.id = uid(); (st.steps || []).forEach(regenStep); }
+function regenJourney(j) { j.id = uid(); (j.stages || []).forEach(regenStage); }
+
+function importDatabase(data) {
+  const personas = Array.isArray(data.personas) ? data.personas : [];
+  const personaMap = {};
+  personas.forEach(p => { const old = p.id; p.id = uid(); personaMap[old] = p.id; });
+  const categories = Array.isArray(data.categories) ? data.categories : [];
+  categories.forEach(cat => {
+    cat.id = uid();
+    (cat.journeys || []).forEach(j => {
+      normalizeJourney(j); regenJourney(j);
+      j.personaId = (j.personaId != null && personaMap[j.personaId] != null) ? personaMap[j.personaId] : null;
+    });
+  });
+  state.categories = categories;
+  state.personas = personas;
+  state.activeCategory = 0; state.activeJourney = 0;
+  ensureActiveIndicesValid();
+  save(); render();
+}
+function importJourney(data) {
+  let cat = currentCategory();
+  if (!cat) { cat = newCategory('Cash loan'); state.categories.push(cat); state.activeCategory = state.categories.length - 1; state.activeJourney = 0; }
+  let personaId = null;
+  if (data.persona && data.persona.name) {
+    let p = state.personas.find(x => x.name === data.persona.name);
+    if (!p) { p = newPersona(data.persona.name); state.personas.push(p); }
+    personaId = p.id;
+  } else if (state.personas[0]) personaId = state.personas[0].id;
+  const j = data.journey || data;
+  normalizeJourney(j); regenJourney(j);
+  j.personaId = personaId;
+  cat.journeys.push(j);
+  state.activeJourney = cat.journeys.length - 1;
+  save(); render();
+}
+function importFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let data;
+    try { data = JSON.parse(e.target.result); } catch (err) { flashToast('✗ Invalid file'); return; }
+    try {
+      if (data && (data.kind === 'database' || Array.isArray(data.categories))) {
+        if (!confirm('Replace ALL data with this imported file? This cannot be undone.')) { flashToast('Import cancelled'); return; }
+        importDatabase(data);
+        const nj = state.categories.reduce((a, c) => a + (c.journeys?.length || 0), 0);
+        flashToast(`✓ Imported (${nj} journeys)`);
+      } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
+        importJourney(data);
+        flashToast('✓ Journey imported');
+      } else {
+        flashToast('✗ Invalid file');
+      }
+    } catch (err) { console.error(err); flashToast('✗ Invalid file'); }
+  };
+  reader.onerror = () => flashToast('✗ Invalid file');
+  reader.readAsText(file);
+}
+
+let _toastTimer = null;
+function flashToast(msg) {
+  let el = document.getElementById('app-toast');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'app-toast';
+    el.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:12px;z-index:9999;box-shadow:var(--shadow);max-width:90vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
+  el.style.display = '';
+}
+
 // ─── Wiring ───────────────────────────────────────────────────────────────────
 document.getElementById('btn-theme').addEventListener('click', toggleTheme);
 document.getElementById('btn-add-category').addEventListener('click', () => createCategory());
@@ -1336,6 +1468,12 @@ btnEmptyAdd.addEventListener('click', () => {
   createJourney();
 });
 btnExport.addEventListener('click', exportPng);
+const btnExportJson = document.getElementById('btn-export-json');
+const btnImport = document.getElementById('btn-import');
+const importInput = document.getElementById('import-file');
+btnExportJson.addEventListener('click', exportDatabase);
+btnImport.addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', () => { importFromFile(importInput.files[0]); importInput.value = ''; });
 
 // sidebar resize
 const SB_MIN = 160, SB_MAX = 420;
