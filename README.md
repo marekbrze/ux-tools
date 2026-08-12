@@ -25,7 +25,7 @@ The constraint is the point: each tool stays small enough to read in one sitting
 
 ## Shared design system
 
-All tools share one system — light by default with a dark theme — built entirely on CSS custom properties (never hardcoded values). Same tokens, spacing and accessibility conventions across the set, so it reads as one product. The full spec lives in [`CLAUDE.md`](./CLAUDE.md) (in Polish).
+All tools share one system — light by default with a dark theme — built entirely on CSS custom properties (never hardcoded values). Same tokens, spacing and accessibility conventions across the set, so it reads as one product. The full spec lives in [`CLAUDE.md`](./CLAUDE.md).
 
 ## Run
 

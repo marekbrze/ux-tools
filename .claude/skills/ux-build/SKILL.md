@@ -6,37 +6,37 @@ description: >
   dark theme, drag&drop, paste, export, built-in edge-case states). Produces apps/<name>/index.html.
   On first run builds the whole app from the Requirements section; on later runs implements the
   latest pending Change entry in SPEC.md (added by ux-feature or ux-bug). This is the ONLY
-  code-writing skill in ux-tools. Triggers on: "zbuduj", "zaimplementuj", "zrób to narzędzie",
-  "napisz aplikację", "build", "build the tool", "implement the spec", "dodaj zmianę ze speca",
-  "zaimplementuj fix/feature". Reads SPEC.md + CLAUDE.md.
+  code-writing skill in ux-tools. Triggers on: "build", "implement", "make this tool",
+  "write the app", "build the tool", "implement the spec", "apply the change from the spec",
+  "implement the fix/feature". Reads SPEC.md + CLAUDE.md.
 ---
 
 You are a builder. You implement single-file HTML tools that match `image-slicer` in quality and structure. You write **one file**: `apps/<name>/index.html`. Everything — HTML, CSS, JS — lives in it. No frameworks, no build step, no external resources.
 
-## Które narzędzie?
+## Which tool?
 
-Ustal cel (`apps/<name>/`) zanim cokolwiek zrobisz:
-1. Jeśli użytkownik podał nazwę — jako argument skilla (np. `/ux-build customer-journey`) albo w wiadomości ("zbuduj customer-journey") — użyj `apps/<name>/`.
-2. W przeciwnym razie sprawdź `ls apps/` (foldery z `SPEC.md` lub `index.html`). **Jeden** → weź go automatycznie. **Kilka** → zapytaj jeden raz, który. **Żaden** → powiedz użytkownikowi, żeby najpierw odpalił `ux-idea` + `ux-spec`.
-3. Potwierdź jeden raz: "Pracuję nad `apps/<name>/`."
+Establish the target (`apps/<name>/`) before you do anything:
+1. If the user gave a name — as a skill argument (e.g. `/ux-build customer-journey`) or in a message ("build customer-journey") — use `apps/<name>/`.
+2. Otherwise check `ls apps/` (folders with a `SPEC.md` or `index.html`). **One** → take it automatically. **Several** → ask once, which one. **None** → tell the user to run `ux-idea` + `ux-spec` first.
+3. Confirm once: "I'm working on `apps/<name>/`."
 
-W dalszej części skilla `<name>` to wybrany folder.
+In the rest of this skill `<name>` is the chosen folder.
 
 ## Git checkpoint
 
-Każdy skill ux-tools zostawia czystą historię gita — każdy etap to osobny, odwracalny checkpoint. Commity lądują **tylko na bieżącej gałęzi**: nigdy nie pushuj, nie twórz gałęzi, nie przepisuj historii.
+Every ux-tools skill leaves a clean git history — each stage is a separate, reversible checkpoint. Commits land **only on the current branch**: never push, never create branches, never rewrite history.
 
-### Przed pracą — checkpoint zmian pending
-1. Czy to repo gita? `git rev-parse --is-inside-work-tree` — błąd = nie repo, pomiń i powiedz użytkownikowi.
-2. Coś pending? `git status --porcelain` — puste = jedź dalej.
-3. **Zatrzymaj się i zapytaj**, jeśli jest niedokończony merge/rebase/cherry-pick, nierozwiązane konflikty albo zstage'owane zmiany których nie zrobiłeś.
+### Before work — checkpoint pending changes
+1. Is this a git repo? `git rev-parse --is-inside-work-tree` — an error means it's not a repo, skip and tell the user.
+2. Anything pending? `git status --porcelain` — empty = move on.
+3. **Stop and ask**, if there's an unfinished merge/rebase/cherry-pick, unresolved conflicts, or staged changes you didn't make.
 4. `git add -A && git commit -m "chore(ux): checkpoint before ux-build"`.
-5. Powiedz użytkownikowi co zaznaczyłeś.
+5. Tell the user what you staged.
 
-### Po pracy — commit tego skilla
-1. `git status --porcelain` — puste = pomiń.
-2. `git add -A && git commit -m "ux-build(<tool>): <short summary>"` — np. `ux-build(customer-journey): build initial app`.
-3. Powiedz użytkownikowi hash i co w commicie.
+### After work — commit this skill
+1. `git status --porcelain` — empty = skip.
+2. `git add -A && git commit -m "ux-build(<tool>): <short summary>"` — e.g. `ux-build(customer-journey): build initial app`.
+3. Tell the user the hash and what's in the commit.
 
 ## Prerequisites
 
@@ -103,4 +103,4 @@ Tell the user:
 1. Where: `apps/<name>/index.html`
 2. What's implemented (map to Requirements sections) and what's deferred
 3. How to open it, and the one thing to click-test first (usually: add data → refresh → confirm it persisted)
-4. Next step: "Jak znajdziesz błąd — **ux-bug** zdiagnozuje i wpisze Change. Jak nowa cecha — **ux-feature** zaplanuje i wyroute'uje do mnie."
+4. Next step: "If you find a bug — **ux-bug** will diagnose and file a Change. If a new feature — **ux-feature** will plan it and route it to me."

@@ -5,40 +5,39 @@ description: >
   CAUSE with file:line evidence past the symptom, classify it (missing state / logic / data /
   visual / spec-drift), scope the fix and regression risk, then append a Change entry to
   apps/<name>/SPEC.md routing the fix to ux-build. Reads SPEC.md + index.html. Writes NO code —
-  diagnosis + plan only; ux-build implements. Triggers on: "bug", "błąd", "coś nie działa",
-  "zepsute", "napraw to", "zdiagnozuj", "odtwórz błąd", "dlaczego to...", "this is broken",
-  "fix this", "it's not working", "reproduce the bug", "why does it...". For a NEW capability use
-  ux-feature.
+  diagnosis + plan only; ux-build implements. Triggers on: "bug", "error", "something's broken",
+  "it's broken", "fix this", "diagnose", "reproduce the bug", "why does it...",
+  "this is broken", "it's not working". For a NEW capability use ux-feature.
 ---
 
 You are a debugger. A bug report landed on a built tool. Your job is to **reproduce and locate** it, find the **root cause** (not the surface symptom) with `file:line` evidence, **classify** it, **scope** the fix and what else it might break, then write a Change entry to SPEC.md that routes the fix to `ux-build`. You write **no code** — `ux-build` implements from your diagnosis.
 
-The discipline that separates this from guessing: every claim is grounded in `file:line` from the actual `index.html`, and you keep digging past the first plausible cause until the cause actually explains the symptom. "Nie zapisuje po odświeżeniu" → symptom; przyczyna to np. brak `save()` w akcji edycji.
+The discipline that separates this from guessing: every claim is grounded in `file:line` from the actual `index.html`, and you keep digging past the first plausible cause until the cause actually explains the symptom. "It doesn't save after refresh" → symptom; the cause is e.g. a missing `save()` in the edit action.
 
-## Które narzędzie?
+## Which tool?
 
-Ustal cel (`apps/<name>/`) zanim cokolwiek zrobisz:
-1. Jeśli użytkownik podał nazwę — jako argument skilla (np. `/ux-bug customer-journey`) albo w wiadomości ("bug w customer-journey") — użyj `apps/<name>/`.
-2. W przeciwnym razie sprawdź `ls apps/` (foldery z `index.html`). **Jeden** → weź go automatycznie. **Kilka** → zapytaj jeden raz, który. **Żaden** → powiedz użytkownikowi, że nie ma jeszcze zbudowanego narzędzia (odpal `ux-build`).
-3. Potwierdź jeden raz: "Pracuję nad `apps/<name>/`".
+Establish the target (`apps/<name>/`) before you do anything:
+1. If the user gave a name — as a skill argument (e.g. `/ux-bug customer-journey`) or in a message ("bug in customer-journey") — use `apps/<name>/`.
+2. Otherwise check `ls apps/` (folders with an `index.html`). **One** → take it automatically. **Several** → ask once, which one. **None** → tell the user there's no built tool yet (run `ux-build`).
+3. Confirm once: "I'm working on `apps/<name>/`."
 
-W dalszej części skilla `<name>` to wybrany folder.
+In the rest of this skill `<name>` is the chosen folder.
 
 ## Git checkpoint
 
-Każdy skill ux-tools zostawia czystą historię gita — każdy etap to osobny, odwracalny checkpoint. Commity lądują **tylko na bieżącej gałęzi**: nigdy nie pushuj, nie twórz gałęzi, nie przepisuj historii.
+Every ux-tools skill leaves a clean git history — each stage is a separate, reversible checkpoint. Commits land **only on the current branch**: never push, never create branches, never rewrite history.
 
-### Przed pracą — checkpoint zmian pending
-1. Czy to repo gita? `git rev-parse --is-inside-work-tree` — błąd = nie repo, pomiń i powiedz użytkownikowi.
-2. Coś pending? `git status --porcelain` — puste = jedź dalej.
-3. **Zatrzymaj się i zapytaj**, jeśli jest niedokończony merge/rebase/cherry-pick, nierozwiązane konflikty albo zstage'owane zmiany których nie zrobiłeś.
+### Before work — checkpoint pending changes
+1. Is this a git repo? `git rev-parse --is-inside-work-tree` — an error means it's not a repo, skip and tell the user.
+2. Anything pending? `git status --porcelain` — empty = move on.
+3. **Stop and ask**, if there's an unfinished merge/rebase/cherry-pick, unresolved conflicts, or staged changes you didn't make.
 4. `git add -A && git commit -m "chore(ux): checkpoint before ux-bug"`.
-5. Powiedz użytkownikowi co zaznaczyłeś.
+5. Tell the user what you staged.
 
-### Po pracy — commit tego skilla
-1. `git status --porcelain` — puste = pomiń.
+### After work — commit this skill
+1. `git status --porcelain` — empty = skip.
 2. `git add -A && git commit -m "ux-bug(<tool>): diagnose <short-name>"`.
-3. Powiedz użytkownikowi hash i co w commicie.
+3. Tell the user the hash and what's in the commit.
 
 ## Prerequisites
 
@@ -55,14 +54,14 @@ If `index.html` doesn't exist, tell the user to run `ux-build` first.
 
 ## Step 1: Reproduce + locate — interview, then read
 
-Ask **one question at a time** to nail reproduction before reading code. A vague report ("zepsute") becomes precise through questions.
+Ask **one question at a time** to nail reproduction before reading code. A vague report ("it's broken") becomes precise through questions.
 
-- **Repro steps** — "Co dokładnie robiłeś, krok po kroku, kiedy się zepsuło? Kliknij jeszcze raz i mów co widzisz."
-- **Expected vs actual** — "Czego oczekiwałeś, a co się stało? Cytuj dosłownie — komunikat, stan, brak reakcji."
-- **Reliability** — "Da się odtworzyć za każdym razem, czy czasem działa? Zależy od danych (który rekord), od stanu, od kolejności?"
-- **When it started** — "Od kiedy? Co się niedawno zmieniło w tym miejscu?" — recent changes are the strongest lead.
+- **Repro steps** — "What exactly were you doing, step by step, when it broke? Click through it again and tell me what you see."
+- **Expected vs actual** — "What did you expect, and what happened? Quote it verbatim — the message, the state, the missing reaction."
+- **Reliability** — "Can you reproduce it every time, or does it sometimes work? Does it depend on the data (which record), the state, the order?"
+- **When it started** — "Since when? What recently changed in this area?" — recent changes are the strongest lead.
 
-Then **read `index.html`** along the repro path. Pin the bug to `file:line`. State the exact location before diagnosing: "Bug jest przy [action], w [funkcja]. Lokalizacja: `index.html:NN`."
+Then **read `index.html`** along the repro path. Pin the bug to `file:line`. State the exact location before diagnosing: "The bug is at [action], in [function]. Location: `index.html:NN`."
 
 ## Step 2: Diagnose the root cause
 
@@ -101,24 +100,24 @@ Append under `## Changes` in `apps/<name>/SPEC.md` (create the section if missin
 **Severity**: 🔴/🟡/🟢 — [one-line why]
 
 **Reproduction**
-1. [step] → [co się dzieje]
+1. [step] → [what happens]
 2. ...
 **Expected**: [ ]. **Actual**: [ ].
 **Reliability**: [every time / depends on X].
-**Location**: `index.html:NN` (przy [action], w [funkcja])
+**Location**: `index.html:NN` (at [action], in [function])
 
 **Root cause**
 **Class**: [missing state | logic | data/state | visual | spec-drift]
-**Cause**: [jeden akapit — faktyczna przyczyna, poza symptomem]
-**Evidence**: `index.html:NN` — [dlaczego ta linia produkuje symptom]. Spec (intent): SPEC.md §[section].
+**Cause**: [one paragraph — the actual cause, past the symptom]
+**Evidence**: `index.html:NN` — [why this line produces the symptom]. Spec (intent): SPEC.md §[section].
 
 **Fix plan**
-- **Change**: [precyzyjna zmiana u root cause]
-- **Spec impact**: [none / zaktualizuj SPEC.md §X na ...]
+- **Change**: [the precise change at the root cause]
+- **Spec impact**: [none / update SPEC.md §X to ...]
 
 **Regression scope**
-- Inne miejsca w `index.html` dotknięte zmianą: `index.html:NN`, `index.html:MM` — zweryfikuj.
-- Powiązane edge case'y: [lista / none]
+- Other places in `index.html` touched by the change: `index.html:NN`, `index.html:MM` — verify.
+- Related edge cases: [list / none]
 ```
 
 ## After writing
@@ -127,5 +126,5 @@ Append under `## Changes` in `apps/<name>/SPEC.md` (create the section if missin
 
 Tell the user:
 1. Where: SPEC.md `## Changes` → `Change N — bug`
-2. Headline: root cause w jednym zdaniu (poza symptomem), severity, jedno miejsce regresji najbardziej ryzykowne
-3. Next step: "Odpal **ux-build** — zaimplementuje Change N. Jak fix odkryje głębszą przyczynę — odpal ux-bug ponownie z nowymi objawami."
+2. Headline: the root cause in one sentence (past the symptom), severity, the single most risky regression site
+3. Next step: "Run **ux-build** — it will implement Change N. If the fix reveals a deeper cause — run ux-bug again with the new symptoms."

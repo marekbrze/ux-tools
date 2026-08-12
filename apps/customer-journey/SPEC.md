@@ -5,110 +5,110 @@
 ## Idea
 
 ### Core concept
-Single-file narzędzie do tworzenia i utrzymywania **map podróży klienta (customer journeys)** jako **ustrukturyzowanej siatki**: **kolumny = kroki** procesu (grupowane w **etapy**), **wiersze = slice'y** (7 stałych wymiarów: działania, touchpointy, myśli, emocje, pain points, pomysły, insighty). CJ są pogrupowane po **kategoriach procesów** i powiązane z **personami**. Siatka sama się układa — koniec z ręcznym przepychaniem elementów po wolnym płótnie Axure.
+A single-file tool for creating and maintaining **customer journeys** as a **structured grid**: **columns = steps** of the process (grouped into **stages**), **rows = slices** (7 fixed dimensions: actions, touchpoints, mindsets, emotions, pain points, ideas, insights). CJs are grouped by **process category** and linked to **personas**. The grid lays itself out — no more manually shoving elements around a freeform Axure canvas.
 
 ### User problem
-- **Ręczna praca w Axure**: CJ dziś żyją na wolnym płótnie → dużo czasu idzie na ogarnianie przestrzeni i ręczne dodawanie/przesuwanie elementów (kroków, entrypointów, pushy) zamiast na treść. Zmiana wymaga przepychania wszystkiego.
-- **Trudna prezentacja zmiany**: pokazanie, jak CJ zmieni się po wprowadzeniu zmiany, jest dzisiaj żmudne i robione ręcznie.
+- **Manual work in Axure**: today CJs live on a freeform canvas → a lot of time goes into managing space and manually adding/moving elements (steps, entrypoints, pushes) instead of into content. Any change means reshuffling everything.
+- **Hard to present a change**: showing how a CJ will change after introducing a modification is tedious today and done by hand.
 
 ### Target user
-UX designer (autor) pracujący nad podróżami klienta w procesach finansowych (np. cash loan, account opening). Jedna osoba autorska; narzędzie osobiste, dane lokalnie.
+A UX designer (the author) working on customer journeys in financial processes (e.g. cash loan, account opening). A single author; a personal tool, data stored locally.
 
 ### Core action
-Otworzyć customer journey → edytować **siatkę kroków × slice'ów** (dodawać/przesuwać kroki i etapy, zarządzać niezależnymi elementami w komórkach) → mieć to od razu uporządkowane i gotowe do pokazania (eksport PNG).
+Open a customer journey → edit the **grid of steps × slices** (add/move steps and stages, manage independent elements in cells) → have it instantly organized and ready to show (PNG export).
 
 ### Scope
 - **MVP**:
-  - Kategorie procesów (cash loan, account opening…) z licznikiem CJ + baza person.
-  - Lista CJ w kategorii (osoba + krótki opis przypadku).
-  - **Edytor CJ jako siatka**: etapy grupujące kroki (kolumny — dodawanie, przenoszenie, rename, usuwanie), 7 stałych slice'ów (wiersze); komórki z wieloma niezależnymi elementami tekstowymi (drag kolejności, usuwanie osobno).
-  - **Eksport całej CJ jako PNG**.
-- **Later** (przyszłe Change'y):
-  - Warianty: kopia CJ → wariant; CJ bazowa oznaczona jako „aktualna"; wariant = bazowa + zmiany.
-  - Wersjonowanie historii edycji CJ.
-  - Prezentacja zmiany (side-by-side przed/po / diff) — format dostarczenia do doprecyzowania.
-  - Obrazki/screenshoty w komórkach (→ IndexedDB na blob-y).
+  - Process categories (cash loan, account opening…) with a CJ counter + a persona pool.
+  - List of CJs in a category (persona + short case description).
+  - **The CJ editor as a grid**: stages grouping steps (columns — add, move, rename, delete), 7 fixed slices (rows); cells with multiple independent text elements (drag to reorder, delete individually).
+  - **Export a whole CJ as PNG**.
+- **Later** (future Changes):
+  - Variants: a copy of a CJ → a variant; the base CJ marked as "current"; a variant = base + changes.
+  - Version history of CJ edits.
+  - Change presentation (side-by-side before/after / diff) — delivery format to be specified.
+  - Images/screenshots in cells (→ IndexedDB for blobs).
 
 ## Requirements
 
 ### Data model
-- **`category`** — proces biznesowy (np. cash loan, account opening); `name`. Wiele. Nadrzędna dla `journey`.
-- **`persona`** — postać z bazy person; `name`. Wiele, współdzielone między CJ. CRUD.
-- **`journey`** (customer journey) — `title`, `description` (scenariusz), `expectations`, `personaId`; należy do `category`. Wiele per kategoria.
-- **`stage`** (etap) — `name`; uporządkowana lista w ramach `journey`; grupuje `step`. Np. Formularz, Obsługa po przesłaniu. (NN/g „Journey Phase".)
-- **`step`** (krok) — `name`; należy do `stage`; uporządkowana. Kolumna siatki.
-- **`slice`** — jeden z 7 stałych wierszy (globalnie, nie per CJ): `action`, `touchpoint`, `mindset`, `emotion`, `pain-point`, `idea`, `insight`.
-- **`cell`** — przecięcie (`step`, `slice`); zawiera uporządkowaną listę `element`.
-- **`element`** — pojedynczy, niezależny wpis tekstowy w `cell` (`text`); kolejność zarządzana, usuwany osobno. Tylko tekst w MVP.
-- **Lifecycle**: usunięcie `category` → kaskada (journeys → stages → steps → cells → elements). Usunięcie `persona` używanej przez `journey` → zapytaj lub null + komunikat.
-- **Storage**: metadane/stan → `localStorage` pod `ux-customer-journey_v1` (jeden obiekt `state`, `save()`/`load()` w `try/catch`, migracje). Brak blob-ów w MVP → bez IndexedDB. (Obrazki w komórkach = Later → wtedy IndexedDB.)
+- **`category`** — a business process (e.g. cash loan, account opening); `name`. Many. Parent of `journey`.
+- **`persona`** — a character from the persona pool; `name`. Many, shared across CJs. CRUD.
+- **`journey`** (customer journey) — `title`, `description` (scenario), `expectations`, `personaId`; belongs to a `category`. Many per category.
+- **`stage`** — `name`; an ordered list within a `journey`; groups `step`s. E.g. Form, Post-submission handling. (NN/g "Journey Phase".)
+- **`step`** — `name`; belongs to a `stage`; ordered. A column in the grid.
+- **`slice`** — one of 7 fixed rows (global, not per CJ): `action`, `touchpoint`, `mindset`, `emotion`, `pain-point`, `idea`, `insight`.
+- **`cell`** — the intersection of (`step`, `slice`); contains an ordered list of `element`s.
+- **`element`** — a single, independent text entry in a `cell` (`text`); order managed, deleted individually. Text only in the MVP.
+- **Lifecycle**: deleting a `category` → cascade (journeys → stages → steps → cells → elements). Deleting a `persona` used by a `journey` → ask, or null + a notice.
+- **Storage**: metadata/state → `localStorage` under `ux-customer-journey_v1` (a single `state` object, `save()`/`load()` in `try/catch`, migrations). No blobs in the MVP → no IndexedDB. (Images in cells = Later → IndexedDB then.)
 
 ### Actions
 | Action | Entity | Description |
 |--------|--------|-------------|
-| Create / Rename / Delete / Reorder | category | zarządzanie kategoriami procesów |
-| Create / Rename / Delete | persona | baza person (współdzielona) |
-| Create / Rename / Delete / Switch | journey | CJ w kategorii; ustaw personę + opis + oczekiwania |
-| Add / Rename / Delete / Reorder | stage | etapy w CJ |
-| Add / Rename / Delete / Reorder | step | kroki w i między etapami |
-| Add / Reorder / Delete | element | niezależne elementy w komórce (drag kolejności) |
-| Set sentiment | emotion cell | wartość emocji per krok (krzywa emocjonalna) |
-| Export PNG | journey | render siatki → PNG (vanilla: SVG/Canvas → toBlob) |
+| Create / Rename / Delete / Reorder | category | manage process categories |
+| Create / Rename / Delete | persona | persona pool (shared) |
+| Create / Rename / Delete / Switch | journey | CJs in a category; set persona + description + expectations |
+| Add / Rename / Delete / Reorder | stage | stages in a CJ |
+| Add / Rename / Delete / Reorder | step | steps within and between stages |
+| Add / Reorder / Delete | element | independent elements in a cell (drag to reorder) |
+| Set sentiment | emotion cell | emotion value per step (emotion curve) |
+| Export PNG | journey | render the grid → PNG (vanilla: SVG/Canvas → toBlob) |
 
-**Rdzeń**: edycja siatki — dodawanie kroków/etapów i zarządzanie elementami w komórkach. `save()` przy każdej zmianie.
+**Core**: grid editing — adding steps/stages and managing elements in cells. `save()` on every change.
 
 ### Screens / views
-- **Header**: tytuł toola + akcje „Nowa CJ" i „Eksport PNG" (aktywnej CJ).
-- **Sidebar**: lista **kategorii** (z licznikiem CJ) + sekcja **person** (baza) + lista **CJ w aktywnej kategorii** (persona + krótki opis). Drag-to-reorder, hover-akcje (✎/×), inline-rename — jak w image-slicer.
-- **Main panel = siatka CJ**: pasek **etapów** rozpięty nad kolumnami **kroków**; 7 wierszy **slice'ów**; komórki edytowalne w miejscu (dodaj element, drag kolejności, usuń). Wiersz `emotion` = wartość sentymentu (krzywa). Zamrożona kolumna z etykietami slice'ów; przewijanie poziome przy wielu krokach.
-- **Empty state**: brak kategorii/CJ → instrukcja „Dodaj kategorię i pierwszą CJ".
+- **Header**: tool title + "New CJ" and "Export PNG" actions (for the active CJ).
+- **Sidebar**: list of **categories** (with a CJ counter) + a **personas** section (the pool) + list of **CJs in the active category** (persona + short description). Drag-to-reorder, hover-actions (✎/×), inline-rename — like in image-slicer.
+- **Main panel = CJ grid**: a **stages** bar spanning the **step** columns; 7 **slice** rows; cells editable in place (add element, drag to reorder, delete). The `emotion` row = sentiment value (curve). A frozen column with slice labels; horizontal scroll when there are many steps.
+- **Empty state**: no categories/CJs → instruction "Add a category and your first CJ".
 
 ### States
-- **Empty**: pusta apka (brak kategorii) oraz pusta CJ (brak kroków) → komunikat + pierwsza akcja.
-- **Error**: pełny `localStorage` / błąd zapisu → grzeczny komunikat (nie `alert()`); `save()` w `try/catch`.
-- **Validation**: lekka — nazwy wymagane przy tworzeniu, auto-nazwa przy pustym (np. „Krok 1", „Etap 1") jak w image-slicer.
+- **Empty**: empty app (no categories) and an empty CJ (no steps) → a message + the first action.
+- **Error**: `localStorage` full / save error → a polite message (not `alert()`); `save()` in `try/catch`.
+- **Validation**: light — names required on creation, auto-name when empty (e.g. "Step 1", "Stage 1") like in image-slicer.
 
 ### Interactions
-- **Drag & drop**: reorder kroków (w i między etapami), reorder etapów, reorder elementów w komórce.
-- **Paste (Ctrl+V)**: tekst do aktywnej komórki — opcjonalne.
-- **Eksport**: aktywna CJ → PNG (download przez `<a download>`; opcjonalnie copy do schowka z feedbackiem „✓ Copied" / „✗ Failed").
-- **Keyboard**: Enter = zapisz inline-edycję, Escape = anuluj.
-- **Live preview**: zmiany w siatce od razu widoczne.
+- **Drag & drop**: reorder steps (within and between stages), reorder stages, reorder elements in a cell.
+- **Paste (Ctrl+V)**: text into the active cell — optional.
+- **Export**: the active CJ → PNG (download via `<a download>`; optionally copy to clipboard with "✓ Copied" / "✗ Failed" feedback).
+- **Keyboard**: Enter = save inline edit, Escape = cancel.
+- **Live preview**: changes in the grid are visible immediately.
 
 ### Edge cases
-- Usunięcie kategorii → kaskada na całą zawartość.
-- Usunięcie persony używanej przez CJ → zapytaj lub null + oznacz.
-- Pusta CJ bez kroków → empty state siatki.
-- Bardzo dużo kroków → przewijanie poziome (zamrożona kolumna slice-labels).
-- Pełny `localStorage` → komunikat, nie cicha utrata.
-- Aktywny indeks po usunięciu → `ensureActiveIndicesValid()` (kategoria/CJ/etap/krok nigdy poza zakresem).
+- Deleting a category → cascade over all its content.
+- Deleting a persona used by a CJ → ask, or null + mark.
+- An empty CJ with no steps → the grid empty state.
+- A very large number of steps → horizontal scroll (frozen slice-labels column).
+- `localStorage` full → a message, not silent loss.
+- Active index after a delete → `ensureActiveIndicesValid()` (category/CJ/stage/step never out of range).
 
 ## Glossary
-| Term (PL) | Code name (EN) | Definition |
+| Term | Code name | Definition |
 |-----------|----------------|------------|
-| kategoria procesu | `category` | Grupa procesów biznesowych (np. cash loan, account opening) grupująca customer journeys. |
-| persona | `persona` | Postać użytkownika, której dotyczy dany customer journey (baza współdzielona). |
-| customer journey | `journey` | Mapa podróży klienta przez dany proces — siatka etapów/kroków × slice'ów. |
-| etap | `stage` | Poziomy pas grupujący kroki (NN/g „Journey Phase"); np. Formularz, Obsługa po przesłaniu. |
-| krok | `step` | Pojedynczy etap granularny — **kolumna** w siatce, należy do `stage`. |
-| slice (wymiar) | `slice` | Wiersz w siatce CJ — jeden z 7 stałych pasów: `action`, `touchpoint`, `mindset`, `emotion`, `pain-point`, `idea`, `insight`. |
-| działanie klienta | `action` | Slice: co klient robi w kroku. |
-| myśli / pytania | `mindset` | Slice: co klient myśli, czego szuka, motywacje. |
-| emocja | `emotion` | Slice: wartość sentymentu w kroku (skala) → krzywa emocjonalna. |
-| pain point | `pain-point` | Slice: trudność/frustracja w kroku. |
-| pomysł | `idea` | Slice: propozycja ulepszenia dla kroku (opportunity). |
-| insight | `insight` | Slice: wniosek/badawcza obserwacja dla kroku. |
-| touchpoint | `touchpoint` | Slice: punkt kontaktu klienta (entrypoint, push, kanał). |
-| entrypoint | `entry-point` | Touchpoint: wejście klienta do kroku/kanału. |
-| push | `push` | Touchpoint: powiadomienie push wychodzące do klienta. |
-| komórka | `cell` | Lista elementów w przecięciu kroku (kolumna) i slice'a (wiersz). |
-| element | `element` | Pojedynczy niezależny wpis tekstowy w komórce (może być wiele; kolejność zarządzana, usuwany osobno). |
-| motyw | `theme` | Motyw UI: `light` (domyślnie), `dark`, `auto` (podąża za `prefers-color-scheme`); persystowany w `state.theme`. |
-| scenariusz | `scenario` | Nagłówek CJ: sytuacja/cel, którego dotyczy mapa (NN/g Scenario). |
-| oczekiwania | `expectations` | Nagłówek CJ: czego klient oczekuje (NN/g Expectations). |
-| wariant | `variant` | (Later) Kopia CJ bazowej z wprowadzonymi zmianami. |
-| wersja | `version` | (Later) Zapisany stan CJ w historii edycji. |
-| bazowa / aktualna | `base` / `current` | (Later) CJ oznaczona jako aktualna, od której powstają warianty. |
+| process category | `category` | A group of business processes (e.g. cash loan, account opening) that groups customer journeys. |
+| persona | `persona` | A user character that a given customer journey pertains to (shared pool). |
+| customer journey | `journey` | A map of the customer's path through a given process — a grid of stages/steps × slices. |
+| stage | `stage` | A horizontal lane grouping steps (NN/g "Journey Phase"); e.g. Form, Post-submission handling. |
+| step | `step` | A single granular stage — a **column** in the grid, belongs to a `stage`. |
+| slice (dimension) | `slice` | A row in the CJ grid — one of 7 fixed lanes: `action`, `touchpoint`, `mindset`, `emotion`, `pain-point`, `idea`, `insight`. |
+| customer action | `action` | Slice: what the customer does in a step. |
+| thoughts / questions | `mindset` | Slice: what the customer thinks, what they look for, motivations. |
+| emotion | `emotion` | Slice: the sentiment value in a step (scale) → emotion curve. |
+| pain point | `pain-point` | Slice: a difficulty/frustration in a step. |
+| idea | `idea` | Slice: an improvement proposal for a step (opportunity). |
+| insight | `insight` | Slice: a conclusion / research observation for a step. |
+| touchpoint | `touchpoint` | Slice: a customer contact point (entrypoint, push, channel). |
+| entrypoint | `entry-point` | Touchpoint: the customer's entry into a step/channel. |
+| push | `push` | Touchpoint: a push notification sent to the customer. |
+| cell | `cell` | A list of elements at the intersection of a step (column) and a slice (row). |
+| element | `element` | A single independent text entry in a cell (there can be many; order managed, deleted individually). |
+| theme | `theme` | UI theme: `light` (default), `dark`, `auto` (follows `prefers-color-scheme`); persisted in `state.theme`. |
+| scenario | `scenario` | CJ header: the situation/goal the map pertains to (NN/g Scenario). |
+| expectations | `expectations` | CJ header: what the customer expects (NN/g Expectations). |
+| variant | `variant` | (Later) A copy of the base CJ with introduced changes. |
+| version | `version` | (Later) A saved CJ state in the edit history. |
+| base / current | `base` / `current` | (Later) The CJ marked as current, from which variants are created. |
 
 ## Changes
 
@@ -116,189 +116,189 @@ Otworzyć customer journey → edytować **siatkę kroków × slice'ów** (dodaw
 **Status**: planned — route to ux-build
 
 **User goal**
-Narzędzie ma być **po angielsku** (użycie profesjonalne), **dostępne** (a11y) i **jaśniejsze** — dotychczasowy motyw dark był dla użytkownika zbyt ciemny. Light jako domyślny, dark jako opcja.
+The tool should be **in English** (professional use), **accessible** (a11y) and **lighter** — the previous dark theme was too dark for the user. Light as default, dark as an option.
 
 **MVP scope**
-- Cały UI po angielsku + `<html lang="en">`.
-- **Light theme domyślnie + dark jako opcja**: przełącznik w headerze; domyślnie podąża za `prefers-color-scheme`; wybór persystowany w `state.theme`.
-- **Aktualizacja design systemu w `CLAUDE.md` (sekcja 2)** na dual palette (light domyślnie + dark) z tokenami jako CSS custom properties — żeby przyszłe apki dziedziczyły light.
-- **Baseline a11y**: semantyczne landmarki (`header`/`main`/`nav`), ikony-akcje jako `<button>` z `aria-label`, ARIA siatki (`role=grid`/`row`/`columnheader`/`rowheader`/`gridcell`), każdy kontrolka osiągalna i operacyjna z klawiatury, **widoczny focus ring**, kontrast interaktywnych ≥ WCAG AA.
+- The whole UI in English + `<html lang="en">`.
+- **Light theme by default + dark as an option**: a toggle in the header; follows `prefers-color-scheme` by default; the choice persisted in `state.theme`.
+- **Update the design system in `CLAUDE.md` (section 2)** to a dual palette (light by default + dark) with tokens as CSS custom properties — so future apps inherit light.
+- **Baseline a11y**: semantic landmarks (`header`/`main`/`nav`), action icons as `<button>` with `aria-label`, grid ARIA (`role=grid`/`row`/`columnheader`/`rowheader`/`gridcell`), every control reachable and operable from the keyboard, a **visible focus ring**, contrast of interactive elements ≥ WCAG AA.
 
 **Later (deferred)**
-- Pełna nawigacja strzałkami po komórkach siatki.
-- Ogłaszanie operacji drag&drop dla czytników ekranu (live regions).
+- Full arrow-key navigation across grid cells.
+- Announcing drag & drop operations for screen readers (live regions).
 
 **Impact**
-- **Data**: + `state.theme` (`'light' | 'dark' | 'auto'`, default `'auto'`). Pole addytywne — **bez key version bump** (`load()` przez `Object.assign` zostawi default przy braku pola w starych danych). Brak blob-ów → localStorage.
-- **Actions**: `toggleTheme()` / `setTheme(v)` → `save()` + zastosuj `data-theme` na `<html>` (+ nasłuch `prefers-color-scheme` gdy `'auto'`).
-- **Screens**: przycisk przełącznika motywu w headerze (☀ / ☾).
-- **States**: brak nowych; edge: brak zapisanego theme → `'auto'` → resolve przez media query; zmiana system theme na żywo w trybie auto.
-- **Interactions**: keyboard (toggle, focus mgmt); media query `prefers-color-scheme`.
-- **Edge cases**: stary stan bez `theme` → default; kontrast w obu motywach ≥ AA.
+- **Data**: + `state.theme` (`'light' | 'dark' | 'auto'`, default `'auto'`). An additive field — **no key version bump** (`load()` via `Object.assign` will keep the default when the field is missing in old data). No blobs → localStorage.
+- **Actions**: `toggleTheme()` / `setTheme(v)` → `save()` + apply `data-theme` on `<html>` (+ listen to `prefers-color-scheme` when `'auto'`).
+- **Screens**: a theme-toggle button in the header (☀ / ☾).
+- **States**: none new; edge: no saved theme → `'auto'` → resolve via media query; system theme changes live while in auto mode.
+- **Interactions**: keyboard (toggle, focus mgmt); `prefers-color-scheme` media query.
+- **Edge cases**: old state without `theme` → default; contrast in both themes ≥ AA.
 - **Glossary**: `theme` (`light` / `dark` / `auto`).
 
 **Build instructions for ux-build**
-1. **`CLAUDE.md` sekcja 2**: zastąp pojedynczą dark paletę **dualnym systemem** — tokeny jako CSS custom properties; wariant light (domyślny na `:root`) i dark (przez `[data-theme="dark"]`, plus `@media (prefers-color-scheme: dark)` gdy `data-theme="auto"`). Light palette: bg `#f7f8fa`, panele `#ffffff #f1f3f5`, granice `#e5e7eb #d0d7de`, tekst `#1f2328`, wtórny `#57606a`, marginalny `#8c959f`, akcent primary `#2563eb` (hover `#1d4ed8`), danger `#d1242f`. Zachowaj dotychczasowe wartości dark jako wariant dark. Zaktualizuj opisy komponentów (btn, sidebar, panel, drop zone, scrollbar), żeby używały tokenów.
-2. **`index.html`**: wprowadź ten sam system tokenów (CSS vars na `:root` + `[data-theme="dark"]`); `<html lang="en">`; przycisk przełącznika w headerze wołający `toggleTheme()`; boot: zastosuj `state.theme` jako `data-theme` na `<html>` + nasłuch `prefers-color-scheme` dla `'auto'`.
-3. **Angielski (wszystkie stringi)**: header hint, sidebar section headers → *Categories / Personas / Customer journeys*, tooltipy ✎/×/⠿ → *Rename / Remove / Drag*, journey meta → *Title / Persona / Scenario (description) / Expectations*, `+ Etap` → *+ Stage*, `+ krok` → *+ Step*, `+ element` → *+ element*, empty states, export → *Export PNG / ✓ Copied / ✗ Failed*, licznik → *N steps*. Slice labels → **Actions, Touchpoints, Mindset, Emotions, Pain points, Ideas, Insights**. Seeded example: kategoria *Cash loan*, persona *Anna*, CJ *Cash loan application*, etap *Stage 1*, krok *Step 1*.
-4. **a11y**: `<html lang="en">`; semantyczne `header`/`main`/`nav`; ikony-akcje (⠿ ✎ × + ☀/☾) jako `<button aria-label="…">`; ARIA w siatce: `#grid` → `role="grid"`, wiersze → `role="row"`, nagłówki kroków → `role="columnheader"`, etykiety slice'ów → `role="rowheader"`, komórki danych → `role="gridcell"`; widoczny `:focus-visible` ring na wszystkich interaktywnych; zachować Enter/Escape w inline-edycji.
-5. **Glossary w SPEC.md**: dopisz `theme` (`light`/`dark`/`auto`) jeśli go nie ma.
+1. **`CLAUDE.md` section 2**: replace the single dark palette with a **dual system** — tokens as CSS custom properties; a light variant (default on `:root`) and a dark variant (via `[data-theme="dark"]`, plus `@media (prefers-color-scheme: dark)` when `data-theme="auto"`). Light palette: bg `#f7f8fa`, panels `#ffffff #f1f3f5`, borders `#e5e7eb #d0d7de`, text `#1f2328`, secondary `#57606a`, marginal `#8c959f`, primary accent `#2563eb` (hover `#1d4ed8`), danger `#d1242f`. Keep the existing dark values as the dark variant. Update the component descriptions (btn, sidebar, panel, drop zone, scrollbar) to use tokens.
+2. **`index.html`**: introduce the same token system (CSS vars on `:root` + `[data-theme="dark"]`); `<html lang="en">`; a toggle button in the header that calls `toggleTheme()`; boot: apply `state.theme` as `data-theme` on `<html>` + listen to `prefers-color-scheme` for `'auto'`.
+3. **English (all strings)**: header hint, sidebar section headers → *Categories / Personas / Customer journeys*, tooltips ✎/×/⠿ → *Rename / Remove / Drag*, journey meta → *Title / Persona / Scenario (description) / Expectations*, `+ Etap` → *+ Stage*, `+ krok` → *+ Step*, `+ element` → *+ element*, empty states, export → *Export PNG / ✓ Copied / ✗ Failed*, counter → *N steps*. Slice labels → **Actions, Touchpoints, Mindset, Emotions, Pain points, Ideas, Insights**. Seeded example: category *Cash loan*, persona *Anna*, CJ *Cash loan application*, stage *Stage 1*, step *Step 1*.
+4. **a11y**: `<html lang="en">`; semantic `header`/`main`/`nav`; action icons (⠿ ✎ × + ☀/☾) as `<button aria-label="…">`; ARIA in the grid: `#grid` → `role="grid"`, rows → `role="row"`, step headers → `role="columnheader"`, slice labels → `role="rowheader"`, data cells → `role="gridcell"`; a visible `:focus-visible` ring on all interactive elements; keep Enter/Escape in inline editing.
+5. **Glossary in SPEC.md**: add `theme` (`light`/`dark`/`auto`) if it's not there yet.
 
 ### Change 2 — bug: low text contrast, esp. dark mode (2026-07-27)
 **Status**: diagnosed — route to ux-build
-**Severity**: 🟡 medium — treść główna (`--text`, `--text-2`) czytelna; niedoczytelne etykiety/listy/chipy/empty states. Bloker a11y dla WCAG AA.
+**Severity**: 🟡 medium — main content (`--text`, `--text-2`) readable; labels/lists/chips/empty states hard to read. An a11y blocker for WCAG AA.
 
 **Reproduction**
-1. Otwórz appkę, przełącz na dark (☀ → ☾).
-2. Czytaj: nagłówki sekcji sidebar (CATEGORIES, PERSONAS…), panel-header, field-labels w journey-meta, empty-state hinty, slice labels, tekst list CJ, liczniki (chip).
-**Expected**: cały tekst ≥ 4.5:1 (WCAG AA). **Actual**: tekst wtórny/marginalny 2.4–4.1:1 — ciężko czytać; light mode też 2.7–4.3:1 na etykietach.
-**Reliability**: za każdym razem, w obu motywach; dark gorzej.
-**Location**: definicje tokenów — `index.html:18-20,29` (light `:root`) i `index.html:47-49,58` (dark `[data-theme="dark"]`).
+1. Open the app, switch to dark (☀ → ☾).
+2. Read: sidebar section headers (CATEGORIES, PERSONAS…), panel-header, field-labels in journey-meta, empty-state hints, slice labels, CJ list text, counters (chip).
+**Expected**: all text ≥ 4.5:1 (WCAG AA). **Actual**: secondary/marginal text 2.4–4.1:1 — hard to read; light mode also 2.7–4.3:1 on labels.
+**Reliability**: every time, in both themes; dark worse.
+**Location**: token definitions — `index.html:18-20,29` (light `:root`) and `index.html:47-49,58` (dark `[data-theme="dark"]`).
 
 **Root cause**
 **Class**: visual / a11y
-**Cause**: szare tokeny dla tekstu wtórnego/marginalnego (`--text-3`, `--text-4`) oraz `--chip-text` są zbyt blisko luminancji swoich tłów — poniżej WCAG AA 4.5:1. Najgorzej dark `--text-4 #555` = 2.4:1 na panelach (nagłówki sekcji, field-labels, empty states prawie nieczytelne). `--text-3 #777` ≈ 4.0:1, `--chip-text #888` = 4.05:1. Light `--text-4 #8c959f` ≈ 2.7–3.0:1, `--text-3 #6e7781` ≈ 4.1:1. Tekst główny i elementów (`--text`, `--text-2`) przechodzi.
-**Evidence** (zmierzone WGAG): dark `#555` on `#141414` = 2.47, on `#111` = 2.53; dark `#777` on `#141414` = 4.11; dark `#888`(chip) on `#2a2a2a` = 4.05; light `#8c959f` on `#fff` = 3.04, on `#f1f3f5` = 2.73; light `#6e7781` on `#f1f3f5` = 4.09. Spec intent: SPEC.md §Requirements→States („kontrast ≥ WCAG AA") + CLAUDE.md §2.1 („Kontrast ≥ WCAG AA w obu motywach").
+**Cause**: the gray tokens for secondary/marginal text (`--text-3`, `--text-4`) and `--chip-text` are too close to the luminance of their backgrounds — below WCAG AA 4.5:1. Worst is dark `--text-4 #555` = 2.4:1 on panels (section headers, field-labels, empty states nearly unreadable). `--text-3 #777` ≈ 4.0:1, `--chip-text #888` = 4.05:1. Light `--text-4 #8c959f` ≈ 2.7–3.0:1, `--text-3 #6e7781` ≈ 4.1:1. Main text and element text (`--text`, `--text-2`) pass.
+**Evidence** (measured WCAG): dark `#555` on `#141414` = 2.47, on `#111` = 2.53; dark `#777` on `#141414` = 4.11; dark `#888` (chip) on `#2a2a2a` = 4.05; light `#8c959f` on `#fff` = 3.04, on `#f1f3f5` = 2.73; light `#6e7781` on `#f1f3f5` = 4.09. Spec intent: SPEC.md §Requirements→States ("contrast ≥ WCAG AA") + CLAUDE.md §2.1 ("Contrast ≥ WCAG AA in both themes").
 
 **Fix plan**
-- **Change**: podbij tokeny do wartości AA (zweryfikowane ≥4.5:1 na realnych tłach):
-  - Dark (`[data-theme="dark"]`, `index.html:47-49,58`): `--text-2: #b9bfc6` (z #999), `--text-3: #9aa0a6` (z #777), `--text-4: #8a9098` (z #555), `--chip-text: #a8aeb6` (z #888).
-  - Light (`:root`, `index.html:18-20`): `--text-2: #4b5563` (z #57606a), `--text-3: #5c6670` (z #6e7781), `--text-4: #626a73` (z #8c959f); `--chip-text` zostaw `#57606a` (5.4:1 OK).
-  - `--text` bez zmian (`#e0e0e0` / `#1f2328` — już AA).
-- **Spec impact**: none — bez zmiany zachowania; CLAUDE.md §2.1 już nakazuje AA, to doprowadza kod do zgodności.
+- **Change**: bump tokens to AA values (verified ≥4.5:1 on real backgrounds):
+  - Dark (`[data-theme="dark"]`, `index.html:47-49,58`): `--text-2: #b9bfc6` (from #999), `--text-3: #9aa0a6` (from #777), `--text-4: #8a9098` (from #555), `--chip-text: #a8aeb6` (from #888).
+  - Light (`:root`, `index.html:18-20`): `--text-2: #4b5563` (from #57606a), `--text-3: #5c6670` (from #6e7781), `--text-4: #626a73` (from #8c959f); leave `--chip-text` at `#57606a` (5.4:1 OK).
+  - `--text` unchanged (`#e0e0e0` / `#1f2328` — already AA).
+- **Spec impact**: none — no behavior change; CLAUDE.md §2.1 already mandates AA, this brings the code into compliance.
 
 **Regression scope**
-- Zmiana tylko tokenów; dotyka każdej powierzchni używającej tych tokenów (nagłówki sekcji, panel-header, field-labels, slice labels, tekst list, chipy, empty states, hinty) — wszystkie staną się bardziej czytelne, brak regresji funkcjonalnej.
-- Zaktualizować też tabelę tokenów w CLAUDE.md §2.1 (kolumny light/dark dla `--text-2/3/4`), żeby design-system-doc zgadzał się z kodem i przyszłe apki dziedziczyły tokeny AA.
+- Only a token change; it touches every surface using these tokens (section headers, panel-header, field-labels, slice labels, list text, chips, empty states, hints) — all become more readable, no functional regression.
+- Also update the token table in CLAUDE.md §2.1 (the light/dark columns for `--text-2/3/4`) so the design-system doc matches the code and future apps inherit AA tokens.
 
 **Build instructions for ux-build**
-- W `index.html`: podmień 4 wartości dark (L47-49, L58) i 3 wartości light (L18-20) na wartości AA powyżej.
-- W `CLAUDE.md` §2.1 tabela: zaktualizuj wiersze `--text-2/3/4` (kolumny light + dark) do nowych wartości.
-- Po zmianie: prze-weryfikuj kontrast ≥4.5:1 dla realnych par token×tło. (text-4 na panel-3/chip dotyczy tylko dekoracyjnych drag-handle `aria-hidden` — zwolnione; dla pełnego marginesu text-4 → #5c6670.)
+- In `index.html`: swap 4 dark values (L47-49, L58) and 3 light values (L18-20) to the AA values above.
+- In `CLAUDE.md` §2.1 table: update the `--text-2/3/4` rows (light + dark columns) to the new values.
+- After the change: re-verify contrast ≥4.5:1 for real token×background pairs. (text-4 on panel-3/chip only affects decorative drag-handles with `aria-hidden` — exempt; for full margin use text-4 → #5c6670.)
 
 ### Change 3 — feature: export/import full DB & single journeys (2026-07-27)
 **Status**: planned — route to ux-build
 
 **User goal**
-Portability/backup danych: eksport i import pełnej bazy (kategorie/persony/CJ) oraz pojedynczych customer journeys — przeniesienie danych między przeglądarkami/urządzeniami, archiwizacja, udostępnianie CJ.
+Data portability/backup: export and import the full database (categories/personas/CJs) and individual customer journeys — moving data between browsers/devices, archiving, sharing CJs.
 
 **MVP scope**
-- Eksport pełnej bazy → JSON (header).
-- Eksport pojedynczej CJ (+ snapshot persony) → JSON (journey-meta toolbar).
-- Import z **auto-detekcją kształtu**: pełna baza → **replace-all (z potwierdzeniem)**; pojedyncza CJ → dodaj do bieżącej kategorii + odtwórz personę (po nazwie, jeśli brak).
-- Regeneracja ID przy imporcie (brak kolizji); walidacja kształtu; graceful error; feedback „✓ Imported / ✗ Invalid file".
+- Export the full database → JSON (header).
+- Export a single CJ (+ persona snapshot) → JSON (journey-meta toolbar).
+- Import with **shape auto-detection**: full database → **replace-all (with confirmation)**; a single CJ → add to the current category + recreate the persona (by name, if missing).
+- ID regeneration on import (no collisions); shape validation; graceful error; "✓ Imported / ✗ Invalid file" feedback.
 
 **Later (deferred)**
-- Selective merge import (wybór co importować).
-- Drag&drop pliku na okno; import wielu CJ naraz.
-- Inne formaty (CSV/Markdown).
+- Selective merge import (choose what to import).
+- Drag & drop a file onto the window; import multiple CJs at once.
+- Other formats (CSV/Markdown).
 
 **Impact**
-- **Data**: bez zmiany kształtu encji; import operuje na istniejącym `state` (categories/personas/journeys/stages/steps/cells/elements). Eksport = serializacja podzbioru `state` (categories + personas + nextId) do JSON. **Bez key version bump** (czysty JSON nad/pod z istniejącym stanem). Brak blob-ów → localStorage.
+- **Data**: no change to the entity shape; import operates on the existing `state` (categories/personas/journeys/stages/steps/cells/elements). Export = serialization of a subset of `state` (categories + personas + nextId) to JSON. **No key version bump** (clean JSON over/under the existing state). No blobs → localStorage.
 - **Actions**: `exportDatabase()`, `exportJourney()`, `importFromFile(file)` (auto-detect → replace-all / add-journey + persona-recreate + id-regen).
-- **Screens**: przyciski w headerze (Export JSON / Import) + „Export CJ" w journey-meta toolbar (obok „+ Stage"); ukryty `<input type="file" accept="application/json,.json">`.
-- **States**: error — uszkodzony/niewłaściwy JSON → toast „✗ Invalid file"; sukces → „✓ Imported"; full-DB replace → bramka potwierdzenia (native `confirm()` jako wyjątek dla akcji destruktywnej, lub inline modal).
-- **Interactions**: file-picker (click hidden input → change → parse); download via `<a download>` (wzorzec z `exportPng`). Brak drag&drop w MVP.
-- **Edge cases**: uszkodzony/zły JSON → graceful; kolizje ID → regeneracja przez `nextId`; single-journey import bez persony w bazie → utwórz nową (po nazwie); persona o tej samej nazwie istnieje → podłącz (nie duplikuj); pełna baza z 0 CJ → pusty replace; import nadpisuje niezapisane zmiany (dlatego confirm przy full DB).
+- **Screens**: buttons in the header (Export JSON / Import) + "Export CJ" in the journey-meta toolbar (next to "+ Stage"); a hidden `<input type="file" accept="application/json,.json">`.
+- **States**: error — corrupt/invalid JSON → "✗ Invalid file" toast; success → "✓ Imported"; full-DB replace → a confirmation gate (native `confirm()` as an exception for a destructive action, or an inline modal).
+- **Interactions**: file-picker (click hidden input → change → parse); download via `<a download>` (pattern from `exportPng`). No drag & drop in the MVP.
+- **Edge cases**: corrupt/bad JSON → graceful; ID collisions → regeneration via `nextId`; single-journey import without a persona in the pool → create a new one (by name); a persona with the same name exists → link it (don't duplicate); a full database with 0 CJs → an empty replace; import overwrites unsaved changes (hence the confirm on full DB).
 - **Glossary**: `backup` (full-DB JSON), `journey-export` (single-CJ JSON).
 
 **Build instructions for ux-build**
-1. `exportDatabase()` → `data = { version:1, kind:'database', categories: state.categories, personas: state.personas }` → `JSON.stringify` → Blob → download `customer-journey-backup-YYYYMMDD.json` (wzorzec download z `exportPng`; `safeFilename`).
-2. `exportJourney()` na `currentJourney()` → `data = { version:1, kind:'journey', journey: structuredClone(j), persona: j.personaId ? {name: personaName(j.personaId)} : null }` → download `<safeFilename(j.title)>.json`.
-3. Ukryty `<input type="file" id="import-file" accept="application/json,.json" style="display:none">`. `importFromFile(file)` → FileReader readAsText → `JSON.parse` (try/catch) → detekcja:
-   - `data.kind==='database'` LUB `data.categories` → pełna baza → `confirm('Replace ALL data with this file?')` → jeśli tak: `state.categories = regenIds(data.categories)`, `state.personas = data.personas || []`, podbij `state.nextId` ponad max ID w danych, `ensureActiveIndicesValid()`, `save()`, `render()`.
-   - `data.kind==='journey'` LUB `data.journey`/`data.stages` → dodaj do `currentCategory()` (jeśli brak kategorii → utwórz); persona: znajdź po nazwie w `state.personas`, jak brak → `newPersona(data.persona.name)`; podepnij `personaId`; zregeneruj ID journey/stages/steps/elements przez `nextId`; `save()`, `render()`.
-   - wpp → toast „✗ Invalid file".
-   - `regenIds` = helper przechodzący po strukturze i nadający nowe ID z `uid()` (kategorie/journeys/stages/steps/elements/persony wg potrzeby).
-4. UI: w headerze dodaj `.btn-ghost btn-sm` „↧ Export JSON" i „↥ Import" (obok Export PNG); w journey-meta toolbar dodaj `.btn-ghost btn-sm` „↧ Export CJ" obok „+ Stage". Przycisk Import → `importInput.click()`.
-5. Feedback: toast sukcesu „✓ Imported (N journeys)"/„✓ Journey imported" i błędu „✗ Invalid file" (wzorzec jak `showStorageError`); brak `alert()`.
-6. Bezpieczeństwo: pełna-baza replace tylko po `confirm()` (natywny OK dla destruktywnej bramki); single-journey import bez confirm (addytywny).
+1. `exportDatabase()` → `data = { version:1, kind:'database', categories: state.categories, personas: state.personas }` → `JSON.stringify` → Blob → download `customer-journey-backup-YYYYMMDD.json` (download pattern from `exportPng`; `safeFilename`).
+2. `exportJourney()` on `currentJourney()` → `data = { version:1, kind:'journey', journey: structuredClone(j), persona: j.personaId ? {name: personaName(j.personaId)} : null }` → download `<safeFilename(j.title)>.json`.
+3. A hidden `<input type="file" id="import-file" accept="application/json,.json" style="display:none">`. `importFromFile(file)` → FileReader readAsText → `JSON.parse` (try/catch) → detection:
+   - `data.kind==='database'` OR `data.categories` → full database → `confirm('Replace ALL data with this file?')` → if yes: `state.categories = regenIds(data.categories)`, `state.personas = data.personas || []`, bump `state.nextId` above the max ID in the data, `ensureActiveIndicesValid()`, `save()`, `render()`.
+   - `data.kind==='journey'` OR `data.journey`/`data.stages` → add to `currentCategory()` (if no category → create one); persona: find by name in `state.personas`, if missing → `newPersona(data.persona.name)`; wire up `personaId`; regenerate IDs of journey/stages/steps/elements via `nextId`; `save()`, `render()`.
+   - otherwise → "✗ Invalid file" toast.
+   - `regenIds` = a helper that walks the structure and assigns new IDs from `uid()` (categories/journeys/stages/steps/elements/personas as needed).
+4. UI: in the header add `.btn-ghost btn-sm` "↧ Export JSON" and "↥ Import" (next to Export PNG); in the journey-meta toolbar add `.btn-ghost btn-sm` "↧ Export CJ" next to "+ Stage". The Import button → `importInput.click()`.
+5. Feedback: success toast "✓ Imported (N journeys)"/"✓ Journey imported" and error "✗ Invalid file" (pattern like `showStorageError`); no `alert()`.
+6. Safety: full-database replace only after `confirm()` (native OK for a destructive gate); single-journey import without confirm (additive).
 
 ### Change 4 — bug: sidebar pluralization + spacing + journey cards (2026-07-27)
 **Status**: diagnosed — route to ux-build
-**Severity**: 🟢 low — cosmetic/presentation, bez wpływu na funkcjonalność.
+**Severity**: 🟢 low — cosmetic/presentation, no functional impact.
 
 **Reproduction**
-1. Sidebar: kategoria z dokładnie 1 CJ → licznik pokazuje „1 journeys" (zła liczba pojedyncza).
-2. Każda pozycja listy (np. CJ): nazwa i treść dodatkowa (persona · opis) stykają się (margin 1px) — brak odstępu.
-3. Lista CJ to płaskie wiersze jak kategorie/persony — nie czyta się jako karty.
-**Expected**: „1 journey" / „N journeys" (i18n plural), wyraźny odstęp nazwa↔sub, CJ jako karty. **Actual**: „1 journeys", brak odstępu, płaskie wiersze.
-**Reliability**: za każdym razem.
-**Location**: `index.html:710` (count sub), `index.html:131` (`.item-sub` margin), `index.html:778` + `index.html:744` (journey items przez `mkSidebarItem` bez wariantu karty).
+1. Sidebar: a category with exactly 1 CJ → the counter shows "1 journeys" (wrong singular).
+2. Each list item (e.g. CJ): the name and the extra content (persona · description) touch (margin 1px) — no gap.
+3. The CJ list is flat rows like categories/personas — it doesn't read as cards.
+**Expected**: "1 journey" / "N journeys" (i18n plural), a clear gap between name ↔ sub, CJs as cards. **Actual**: "1 journeys", no gap, flat rows.
+**Reliability**: every time.
+**Location**: `index.html:710` (count sub), `index.html:131` (`.item-sub` margin), `index.html:778` + `index.html:744` (journey items via `mkSidebarItem` without a card variant).
 
 **Root cause**
 **Class**: visual / UX
-**Cause**: (1) licznik na L710 ma hardcoded „journeys" bez liczby pojedynczej — pattern singular/plural istnieje dla stepów (L967), ale tu nie zastosowany. (2) `.item-sub` ma `margin-top: 1px` (L131) — zbyt ciasny odstęp nazwa↔treść. (3) journey items renderowane są tym samym generycznym `.sb-item` co kategorie/persony (`mkSidebarItem` L778) — brak wariantu „card", więc lista CJ wygląda jak zwykłe wiersze zamiast kart.
-**Evidence**: L710 `sub: \`${cat.journeys.length} journeys\``; L131 `margin-top: 1px`; L778 `li.className = 'sb-item' ...` (brak klas wariantu); L744 `renderJourneyList` → `mkSidebarItem` bez flagi `card`. Spec intent: SPEC.md §Requirements→Screens (sidebar z listą CJ pokazuje personę + opis — czytelność) + CLAUDE.md §2.3 (sidebar, komponenty spójne).
+**Cause**: (1) the counter on L710 has a hardcoded "journeys" without a singular form — a singular/plural pattern exists for steps (L967), but it's not applied here. (2) `.item-sub` has `margin-top: 1px` (L131) — too tight a gap between name and content. (3) journey items are rendered by the same generic `.sb-item` as categories/personas (`mkSidebarItem` L778) — no "card" variant, so the CJ list looks like ordinary rows instead of cards.
+**Evidence**: L710 `sub: \`${cat.journeys.length} journeys\``; L131 `margin-top: 1px`; L778 `li.className = 'sb-item' ...` (no variant classes); L744 `renderJourneyList` → `mkSidebarItem` without the `card` flag. Spec intent: SPEC.md §Requirements→Screens (sidebar with a CJ list shows persona + description — legibility) + CLAUDE.md §2.3 (sidebar, components consistent).
 
 **Fix plan**
-- **Pluralization (L710)**: dodaj helper `function plural(n, one, many){ return n===1?one:many; }` i użyj: `sub: \`${cat.journeys.length} ${plural(cat.journeys.length,'journey','journeys')}\``. (Opcjonalnie zastąp nim też ternary w stepCount L967 dla spójności.)
-- **Spacing (L131)**: `.sb-item .item-sub { margin-top: 4px; }` (z 1px) — wyraźny odstęp nazwa↔treść.
-- **Journey cards**: w `mkSidebarItem` dodaj parametr `card` → `li.className = 'sb-item' + (active?' active':'') + (card?' sb-card':'')`; w `renderJourneyList` przekaż `card: true`. CSS:
+- **Pluralization (L710)**: add a helper `function plural(n, one, many){ return n===1?one:many; }` and use it: `sub: \`${cat.journeys.length} ${plural(cat.journeys.length,'journey','journeys')}\``. (Optionally also replace the ternary in stepCount L967 with it for consistency.)
+- **Spacing (L131)**: `.sb-item .item-sub { margin-top: 4px; }` (from 1px) — a clear gap between name and content.
+- **Journey cards**: in `mkSidebarItem` add a `card` parameter → `li.className = 'sb-item' + (active?' active':'') + (card?' sb-card':'')`; in `renderJourneyList` pass `card: true`. CSS:
   - `.sb-item.sb-card { background: var(--cell); border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }`
   - `.sb-item.sb-card:hover { background: var(--cell-hover); border-color: var(--border); }`
   - `.sb-item.sb-card.active { background: var(--accent-soft); border-color: var(--accent); }`
   - `.sb-item.sb-card .item-name { font-weight: 600; color: var(--text-2); }` (`.sb-item.sb-card.active .item-name` → `var(--text)`).
-  - Kategoria/persona zostają płaskimi wierszami (bez `sb-card`).
-- **Spec impact**: none — prezentacja sidebar; SPEC §Screens opisuje listę CJ z personą+opisem, to poprawia czytelność bez zmiany danych/akcji.
+  - Category/persona stay as flat rows (without `sb-card`).
+- **Spec impact**: none — sidebar presentation; SPEC §Screens describes the CJ list with persona + description, this improves legibility without changing data/actions.
 
 **Regression scope**
-- `.item-sub` margin dotyczy wszystkich pozycji sidebar (kategorie/persony/CJ) → wszystkie dostają więcej odstępu (poprawa, brak regresji).
-- `.sb-card` tylko na journey items; kategorie/persony nietknięte.
-- `plural()` nowy helper, użyty na L710; bezpieczny.
-- `mkSidebarItem` +1 parametr `card`; tylko `renderJourneyList` przekazuje `true`.
-- Drag-reorder / drop indicators (`.sb-item`) nadal działają — `sb-card` zachowuje klasę `sb-item`.
+- `.item-sub` margin affects all sidebar items (categories/personas/CJs) → all get more spacing (improvement, no regression).
+- `.sb-card` only on journey items; categories/personas untouched.
+- `plural()` is a new helper, used on L710; safe.
+- `mkSidebarItem` +1 `card` parameter; only `renderJourneyList` passes `true`.
+- Drag-reorder / drop indicators (`.sb-item`) still work — `sb-card` keeps the `sb-item` class.
 
 ### Change 5 — bug: sidebar name↔actions spacing + CJ card stacked info (2026-07-27)
 **Status**: diagnosed — route to ux-build
 **Severity**: 🟢 low — cosmetic/presentation sidebar.
 
 **Reproduction**
-1. Sidebar: nazwa kategorii / CJ styka się z przyciskami akcji po prawej (✎ × ⠿) — brak poziomego odstępu.
-2. Karta CJ: persona i opis są w jednej, uciętej linii („persona · opis") zamiast osobnymi liniami pod tytułem.
-**Expected**: wyraźny odstęp nazwa↔przyciski akcji; CJ → tytuł (1 linia) + **persona** + **opis** jako osobne linie poniżej. **Actual**: stykające się nazwa i przyciski; persona+opis w jednej uciętej linii.
-**Reliability**: za każdym razem.
-**Location**: `index.html:126` (`.sb-item { gap: 6px }`), `index.html:804-808` (`mkSidebarItem` renderuje `sub` jako jeden `span`), `renderJourneyList` (łączy `persona · opis` w jeden string).
+1. Sidebar: a category / CJ name touches the action buttons on the right (✎ × ⠿) — no horizontal gap.
+2. CJ card: persona and description are in a single, truncated line ("persona · description") instead of separate lines below the title.
+**Expected**: a clear gap between name ↔ action buttons; CJ → title (1 line) + **persona** + **description** as separate lines below. **Actual**: name and buttons touching; persona+description in one truncated line.
+**Reliability**: every time.
+**Location**: `index.html:126` (`.sb-item { gap: 6px }`), `index.html:804-808` (`mkSidebarItem` renders `sub` as one `span`), `renderJourneyList` (joins `persona · description` into one string).
 
 **Root cause**
 **Class**: visual / UX
-**Cause**: (1) `.sb-item` ma `gap: 6px` (L126) — zbyt mały odstęp między `item-main` (nazwa) a grupą przycisków akcji po prawej. (2) `mkSidebarItem` renderuje `sub` zawsze jako jeden `span` (L804-808), a `renderJourneyList` łączy personę i opis w jeden string „·" → jedna ucięta linia zamiast stacku pod tytułem.
-**Evidence**: L126 `gap: 6px`; L804 `if (sub) { const subSpan = ...; subSpan.textContent = sub; }`; renderJourneyList `sub: \`${personaName(...)}${j.description ? ' · ' + j.description : ''}\``. Spec intent: SPEC.md §Requirements→Screens (lista CJ pokazuje personę + opis — czytelność) + CLAUDE.md §2.3.
+**Cause**: (1) `.sb-item` has `gap: 6px` (L126) — too small a gap between `item-main` (the name) and the action-button group on the right. (2) `mkSidebarItem` always renders `sub` as a single `span` (L804-808), and `renderJourneyList` joins persona and description into one "·" string → one truncated line instead of a stack under the title.
+**Evidence**: L126 `gap: 6px`; L804 `if (sub) { const subSpan = ...; subSpan.textContent = sub; }`; renderJourneyList `sub: \`${personaName(...)}${j.description ? ' · ' + j.description : ''}\``. Spec intent: SPEC.md §Requirements→Screens (the CJ list shows persona + description — legibility) + CLAUDE.md §2.3.
 
 **Fix plan**
-- **Spacing (L126)**: `.sb-item { gap: 10px }` (z 6px) — wyraźny odstęp nazwa↔przyciski akcji (dotyczy wszystkich pozycji sidebar).
-- **Stacked info**: w `mkSidebarItem` obsłuż `sub` jako **string lub array** — jeśli array, renderuj każdy element jako osobny `.item-sub` (stack). Implementacja: `const subs = Array.isArray(sub) ? sub : (sub ? [sub] : []); subs.forEach(s => { const subSpan=...; subSpan.textContent=s; main.appendChild(subSpan); })`.
-- **renderJourneyList**: przekaż `sub: [personaName(j.personaId), j.description].filter(Boolean)` (array) → persona i opis jako osobne linie pod tytułem. Kategoria/persona zostają przy string-sub (niezmienione).
-- **Spec impact**: none — prezentacja sidebar.
+- **Spacing (L126)**: `.sb-item { gap: 10px }` (from 6px) — a clear gap between name ↔ action buttons (affects all sidebar items).
+- **Stacked info**: in `mkSidebarItem` handle `sub` as a **string or array** — if an array, render each item as a separate `.item-sub` (stack). Implementation: `const subs = Array.isArray(sub) ? sub : (sub ? [sub] : []); subs.forEach(s => { const subSpan=...; subSpan.textContent=s; main.appendChild(subSpan); })`.
+- **renderJourneyList**: pass `sub: [personaName(j.personaId), j.description].filter(Boolean)` (array) → persona and description as separate lines under the title. Category/persona keep string-sub (unchanged).
+- **Spec impact**: none — sidebar presentation.
 
 **Regression scope**
-- `gap` na `.sb-item` dotyczy wszystkich pozycji → więcej odstępu (poprawa, brak regresji).
-- `sub` jako array/string: tylko `renderJourneyList` przekazuje array; `renderCategoryList`/`renderPersonaList` przekazują string (zachowane). `mkSidebarItem` obsługuje oba.
-- Pusta tablica `sub` (`[]`) → brak linii sub (poprawne).
+- `gap` on `.sb-item` affects all items → more spacing (improvement, no regression).
+- `sub` as array/string: only `renderJourneyList` passes an array; `renderCategoryList`/`renderPersonaList` pass a string (preserved). `mkSidebarItem` handles both.
+- An empty `sub` array (`[]`) → no sub line (correct).
 
 ### Change 6 — bug: sidebar lines never stacked — item-main not a flex column (2026-07-27)
 **Status**: diagnosed — route to ux-build
-**Severity**: 🟡 medium — dotyczy czytelności całego sidebar; powód, dla którego Change 4 i 5 „nie zadziałały" wizualnie.
+**Severity**: 🟡 medium — affects the legibility of the whole sidebar; the reason Change 4 and 5 "didn't work" visually.
 
 **Reproduction**
-1. Sidebar: pomiędzy nazwą kategorii a liczbą CJ (item-sub) **nie ma marginesu** — teksty stykają się.
-2. Karta CJ: tytuł, persona i opis również bez odstępu między liniami.
-**Expected**: nazwa / count (oraz title / persona / opis) ułożone pionowo z wyraźnym odstępem. **Actual**: linie bez separacji.
-**Reliability**: za każdym razem.
+1. Sidebar: between a category name and the CJ count (item-sub) there is **no margin** — the texts touch.
+2. CJ card: title, persona and description also have no gap between lines.
+**Expected**: name / count (and title / persona / description) stacked vertically with a clear gap. **Actual**: lines without separation.
+**Reliability**: every time.
 **Location**: `index.html:129` (`.item-main { flex:1; min-width:0; }`), `index.html:131` (`.item-sub { ... margin-top: 4px }`).
 
 **Root cause**
 **Class**: visual / CSS
-**Cause**: `.item-main` (L129) **nie jest kontenerem flex-column** — dzieci (`<span class="item-name">`, `<span class="item-sub">`) są elementami **inline**, więc nie układają się w osobnych wierszach, a `margin-top` na elementach inline jest **ignorowany**. Dlatego `margin-top:4px` (Change 4) i array-sub (Change 5) nie dały widocznego efektu — separacja nigdy fizycznie nie zadziałała. (Skutek uboczny: `text-overflow:ellipsis` na `item-name` też nie działa, bo inline span — długie nazwy nie są ucinane.)
-**Evidence**: L129 brak `display:flex; flex-direction:column`; L131 `margin-top: 4px` (ignorowane na inline); L130 `item-name` inline span. Spec intent: SPEC.md §Requirements→Screens (lista CJ z personą + opisem — czytelność).
+**Cause**: `.item-main` (L129) **is not a flex-column container** — its children (`<span class="item-name">`, `<span class="item-sub">`) are **inline** elements, so they don't lay out on separate rows, and `margin-top` on inline elements is **ignored**. That's why `margin-top:4px` (Change 4) and array-sub (Change 5) had no visible effect — the separation never physically worked. (Side effect: `text-overflow:ellipsis` on `item-name` also doesn't work, because it's an inline span — long names aren't truncated.)
+**Evidence**: L129 no `display:flex; flex-direction:column`; L131 `margin-top: 4px` (ignored on inline); L130 `item-name` inline span. Spec intent: SPEC.md §Requirements→Screens (CJ list with persona + description — legibility).
 
 **Fix plan**
-- **L129**: `.sb-item .item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }` — dzieci stają się flex-items (blockowane), układają się pionowo z odstępem 6px.
-- **L131**: `.item-sub` — usuń `margin-top: 4px` (→ `margin-top: 0`); odstęp przejmuje `gap` na `.item-main`.
-- **Bonus**: jako flex-item, `item-name` się „zablokuje" → `text-overflow:ellipsis` zacznie działać (długie nazwy ucinane).
-- **Spec impact**: none — prezentacja sidebar.
+- **L129**: `.sb-item .item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }` — children become flex-items (blocked), they stack vertically with a 6px gap.
+- **L131**: `.item-sub` — remove `margin-top: 4px` (→ `margin-top: 0`); the gap is now handled by `gap` on `.item-main`.
+- **Bonus**: as a flex-item, `item-name` becomes "blocked" → `text-overflow:ellipsis` starts working (long names truncated).
+- **Spec impact**: none — sidebar presentation.
 
 **Regression scope**
-- Zmiana dotyczy wszystkich pozycji sidebar (kategorie/persony/CJ) → wszystkie dostaną poprawne stackowanie + 6px odstępu między liniami (poprawa, brak regresji).
-- `item-name` zacznie truncate długie nazwy (pożądane).
-- Kategorie/persony nadal używają string-sub (jedna linia sub); CJ używa array-sub (wiele linii) — oba renderują się poprawnie w flex-column.
+- The change affects all sidebar items (categories/personas/CJs) → all get correct stacking + a 6px gap between lines (improvement, no regression).
+- `item-name` starts truncating long names (desirable).
+- Categories/personas still use string-sub (one sub line); CJs use array-sub (multiple lines) — both render correctly in a flex-column.
