@@ -302,3 +302,72 @@ Data portability/backup: export and import the full database (categories/persona
 - The change affects all sidebar items (categories/personas/CJs) → all get correct stacking + a 6px gap between lines (improvement, no regression).
 - `item-name` starts truncating long names (desirable).
 - Categories/personas still use string-sub (one sub line); CJs use array-sub (multiple lines) — both render correctly in a flex-column.
+
+### Change 7 — feature: step screenshots (IndexedDB) + persona library with JSON import (2026-08-18)
+**Status**: planned — route to ux-build
+
+**User goal**
+1. Attach UI screenshots to every CJ step (the screen state at that step) — visible directly in the map and in the PNG export.
+2. Keep personas in the private `marekbrze/business` repo (source of truth) and import them into the tool as JSON — so persona data NEVER lands in the ux-tools repo.
+
+**MVP scope**
+- **A. Screenshots**: 8th grid row "Screenshots" (below Insights) — thumbnails per step; adding via file picker (+ add), drag & drop of a file onto the cell, Ctrl+V (clicking a cell sets the paste target); clicking a thumbnail → lightbox; hover × → delete. Blobs → IndexedDB; metadata (`id`, `w`, `h`) in localStorage. PNG export draws a thumbnails band. JSON export/import carries the images (dataURL in the file).
+- **B. Persona library**: `persona` + fields `role`, `description`, `goals[]`, `needs[]`, `frustrations[]`, `quote`. Import of a `kind: 'personas'` file — **merge by name** (existing → overwrites fields present in the file, new → added, local ones not in the file stay; CJs keep their link). Persona card (read-only modal) on clicking a persona in the sidebar + ⓘ button next to the persona select in journey-meta. Small ↥ in the Personas section header (same global import).
+
+**Later (deferred)**
+- Screenshot captions + drag-reorder of thumbnails in a cell.
+- Downscale/compress images on add (IndexedDB quota control).
+- Local editing of persona fields in the modal (today read-only — source of truth is the business repo).
+- Persona avatar/photo in the format and card.
+- Importing multiple persona files at once / selective merge.
+
+**Impact**
+- **Data**:
+  - New `screenshots` slice in `SLICES` → `step.cells.screenshots = [{ id, w, h }]` (empty list by default). Metadata in localStorage.
+  - Image blobs: **new IndexedDB** `ux-customer-journey-images` (store `images`, keyPath `id`, record `{ id, blob, type, name, w, h }`). Never a dataURL in localStorage.
+  - `persona`: `{ id, name, role, description, goals[], needs[], frustrations[], quote }` — fields optional, normalized on `load()` and import.
+  - **No key version bump** (`ux-customer-journey_v1` stays): `load()` already normalizes missing slice keys (loop over `SLICES`), old data gets an empty `screenshots` row; personas get empty fields via `normalizePersona`.
+- **Actions**: `addScreenshotsFromFiles(stepId, files)`, `removeScreenshot(stepId, shotId)` (+ blob delete), `openLightbox(stepId, shotId)`, `openPersonaCard(personaId)`, `importPersonas(data)` (merge by name, case-insensitive after trim). Changed: `exportPng()` (async, thumbnails band), `exportDatabase()`/`exportJourney()` (async, + `images[]` as dataURL), `importDatabase()`/`importJourney()` (import `images[]` → IDB + ID remap).
+- **Screens**: 8th "Screenshots" row in the grid; lightbox (overlay); persona card (modal from the sidebar); ↥ in the Personas header; ⓘ next to the persona select in journey-meta.
+- **States**: empty Screenshots row (per step — "+ add" placeholder); missing/unavailable IndexedDB → try/catch + toast, the tool works without images; IDB quota → toast "✗ Couldn't store image"; missing blob on PNG/lightbox (IDB wiped) → dashed placeholder; imported persona without `name` → skipped; a file with no personas at all → "✗ Invalid file".
+- **Interactions**: drag & drop of an image/* file onto a row cell (drag-over accent); Ctrl+V paste of a clipboard image into the last-clicked Screenshots cell (no active cell → toast hint); thumbnail click → lightbox; Escape/backdrop/× closes the lightbox and the persona card; focus in modals (focus close button, restore on close).
+- **Edge cases**: deleting a step/stage/CJ/category + replace-all on import → cascading removal of blobs from IDB (helper collecting `id`s from `cells.screenshots`); large canvas with many screenshots — fixed-height thumbnails bound the band height; an old JSON backup without `images` → imports without images (normalize); persona name duplicates differing in case → case-insensitive merge (no dupes); `goals/needs/frustrations` as a string in the file → normalized to `[string]`.
+- **Glossary**: `screenshot`, `image store`, `lightbox`, `persona card`, `personas import`.
+
+**`kind: 'personas'` contract format** (to be implemented by the generator in `marekbrze/business`):
+```json
+{
+  "version": 1,
+  "kind": "personas",
+  "app": "customer-journey",
+  "personas": [
+    {
+      "name": "Anna Kowalska",
+      "role": "Senior accountant",
+      "description": "…",
+      "goals": ["…"],
+      "needs": ["…"],
+      "frustrations": ["…"],
+      "quote": "…"
+    }
+  ]
+}
+```
+Import tolerance: only `name` required; lists as `string[]` OR string (→ single-element list); fields optional, unknown fields ignored; missing fields = no change on merge.
+
+**Build instructions for ux-build**
+1. **Slice**: append `{ key: 'screenshots', label: 'Screenshots' }` to `SLICES` + `const SCREENSHOT_KEY = 'screenshots';`. `freshCells()`/`normalizeStep()` produce an empty list automatically (key ≠ `EMOTION_KEY` → `[]`).
+2. **IndexedDB** (new section at Persistence): `openImagesDb()` (lazy singleton, DB `ux-customer-journey-images`, v1, store `images` keyPath `id`); `dbPutImage(rec)`, `dbGetImage(id)`, `dbDeleteImage(id)` — all Promise + try/catch. Helpers: `blobToDataURL(blob)`, `dataURLToBlob(dataURL)`.
+3. **Add**: `addScreenshotsFromFiles(stepId, files)` — filter `type.startsWith('image/')`; dimensions via `createImageBitmap` (fallback `Image`); `uid()` → `dbPutImage({id, blob, type, name, w, h})`; push `{id, w, h}` to `cells.screenshots`; `save() + renderGrid()`. IDB errors → toast, don't break rendering.
+4. **Grid**: in `renderGrid()` branch at cell construction (today: `if (slice.key === EMOTION_KEY)`): `slice.key === SCREENSHOT_KEY` → `buildScreenshots(step)` instead of `buildCellElements`. `buildScreenshots`: flex-wrap container; thumbnail = `<button class="shot-thumb">` with `<img>` (height 56px, width auto, max-width 100%) — `src` filled asynchronously (`dbGetImage` → `URL.createObjectURL`; Map cache id→objectURL, revoke on delete); hover × = `removeScreenshot` (removes the entry + `dbDeleteImage` + revoke); "+ add" = dashed button → hidden `<input type="file" accept="image/*" multiple>`. Cell: `tabindex="0"`, click sets `_activeShotsCell = {stepId}`; `dragover/drop` on files → `addScreenshotsFromFiles` + drag-over class. Paste: `document` `paste` listener — if `clipboardData.items` has an image and `_activeShotsCell` exists → add; otherwise toast hint "Click a Screenshots cell first".
+5. **Lightbox**: `openLightbox(stepId, shotId)` — overlay (fixed, dim backdrop) with the image `max-width:90vw; max-height:85vh; object-fit:contain`; close: ×, Escape, backdrop click; `role="dialog" aria-modal="true" aria-label="Screenshot"`; focus × on open, restore on close. Missing blob → placeholder.
+6. **Cascade**: helper `collectShotIds(journey)`; called in `removeStep` (single step), `removeStage`/`removeJourney`/`removeCategory` (recursively) and `importDatabase` (everything replaced) → `dbDeleteImage` per id (fire-and-forget, catch).
+7. **PNG**: `exportPng()` → async: before drawing `Promise.all` over `flat` — `dbGetImage` + `createImageBitmap` for screenshots; the Screenshots band appended to `sliceRows` (thumbnail h=72px, width from aspect `w*(72/h)` clamped to `colW-16`); draw with `drawImage` preserving aspect; missing image → dashed rect. Band height computed from metadata (`w`/`h`), images loaded before canvas sizing.
+8. **JSON export**: `exportDatabase()`/`exportJourney()` → async; collect all screenshots from the exported subset → `images: [{ id, name, type, w, h, data }]` (`data` = dataURL) at the payload top level; steps still keep `{id, w, h}` in `cells.screenshots`.
+9. **JSON import**: in `importDatabase()`/`importJourney()`: if `data.images` — for each record `dataURLToBlob` → new `uid()` → `dbPutImage` → remap old→new `id` in all `cells.screenshots` (oldId→newId map; entries without an image in `images` dropped). No `data.images` → import without images (old files).
+10. **Personas — model**: `newPersona(name)` → `{ id, name, role:'', description:'', goals:[], needs:[], frustrations:[], quote:'' }`; `normalizePersona(p)` in `load()` (next to the slice-normalizing loop) and on import. `personaName()` unchanged.
+11. **Personas import**: `importPersonas(data)` — validate `Array.isArray(data.personas)`; per persona: `name` required (trim); find in `state.personas` by name (trim, case-insensitive); found → overwrite ONLY fields present in the file (lists normalized string|string[] → string[]); new → `newPersona` + fill; toast `✓ Personas imported (N added, M updated)`. Detection in `importFromFile()` — order: `database` → `personas` (`kind==='personas' && Array.isArray(data.personas)`) → `journey` → invalid. No confirm (non-destructive merge).
+12. **Persona card**: `openPersonaCard(personaId)` — modal: name (h2), `role` (subtitle/chip), `description` (paragraph), `quote` (blockquote), `goals`/`needs`/`frustrations` as label + list; empty sections hidden; × / Escape / backdrop closes; `role="dialog" aria-modal`; focus like the lightbox. `renderPersonaList()`: `onActivate: () => openPersonaCard(p.id)` (click = view; rename stays ✎/dblclick). Personas section header: add ↥ → `importInput.click()`.
+13. **Journey-meta**: next to the persona select an ⓘ button (`btn-ghost btn-sm`, disabled when `personaId == null`) → `openPersonaCard(j.personaId)`. `exportJourney()`: persona snapshot = full object (not just `name`); `importJourney()` — match by name unchanged, use full fields for a new persona.
+14. **CSS** (tokens only!): `.shots` (flex-wrap, gap 4px), `.shot-thumb` (border, radius 4, hover border-accent), `.shot-remove` (hover-reveal), `.shot-add` (dashed), `.g-cell.shots-cell.drag-over` (accent), lightbox + persona-card (overlay, panel, shadow), `.pc-list`/`.pc-label`. A11y: thumbnails as buttons with `aria-label`; dialogs with `aria-modal`; focus-visible everywhere.
+15. **Regression**: all existing flows (grid, element drag & drop, emotion, PNG, database/journey export/import, theme, sidebar) work unchanged; `SLICES` +1 row → PNG/ARIA/normalization consistent.
