@@ -34,6 +34,7 @@
     --element-hover-bg: #eef0f2;
     --scrollbar: #c8d0d8;
     --shadow: 0 1px 2px rgba(31,35,40,0.06);
+    --overlay: rgba(0,0,0,0.5);
   }
   [data-theme="dark"] {
     --bg: #111;
@@ -63,6 +64,7 @@
     --element-hover-bg: #1e1e1e;
     --scrollbar: #2a2a2a;
     --shadow: none;
+    --overlay: rgba(0,0,0,0.6);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -268,6 +270,57 @@
 
   /* storage error toast */
   #storage-error { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 10px 16px; font-size: 12px; z-index: 9999; max-width: 90vw; text-align: center; }
+
+  /* ── Screenshots row ── */
+  .g-cell .shots { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; align-items: flex-start; }
+  .shot-thumb {
+    position: relative; height: 56px; width: auto; padding: 0; flex-shrink: 1; min-width: 20px;
+    border: 1px solid var(--element-border); border-radius: 4px; overflow: hidden;
+    background: var(--element-bg); cursor: zoom-in;
+  }
+  .shot-thumb img { display: block; height: 100%; width: auto; max-width: 160px; object-fit: cover; }
+  .shot-thumb:hover { border-color: var(--accent); }
+  .shot-thumb .shot-remove {
+    position: absolute; top: 1px; right: 1px; width: 16px; height: 16px; line-height: 1;
+    font-size: 11px; border-radius: 3px; color: var(--text-4); background: var(--panel);
+    opacity: 0; cursor: pointer; padding: 0;
+  }
+  .shot-thumb:hover .shot-remove, .shot-thumb .shot-remove:focus-visible { opacity: 1; }
+  .shot-thumb .shot-remove:hover { color: var(--danger); background: var(--danger-soft); }
+  .shot-add {
+    width: 34px; height: 56px; border: 1px dashed var(--border); border-radius: 4px; cursor: pointer;
+    font-size: 14px; color: var(--text-4); background: transparent; flex-shrink: 0; padding: 0;
+  }
+  .shot-add:hover { border-color: var(--accent); color: var(--accent-soft-text); }
+  .g-cell.shots-cell.drag-over { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+  .g-cell.shots-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ── Overlays: lightbox + persona card ── */
+  .overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+  #lightbox { cursor: zoom-out; }
+  #lightbox img { max-width: 90vw; max-height: 85vh; object-fit: contain; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+  #lightbox .lb-close { position: absolute; top: 14px; right: 16px; width: 32px; height: 32px; border-radius: 6px; font-size: 18px; color: var(--text); background: var(--panel); border: 1px solid var(--border); cursor: pointer; }
+  #lightbox .lb-close:hover { color: var(--danger); border-color: var(--danger); }
+  #lightbox .lb-caption { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text-2); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; max-width: 80vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #lightbox .lb-missing { color: var(--text-2); font-size: 13px; background: var(--panel); border: 1px dashed var(--border); border-radius: 8px; padding: 16px 22px; }
+
+  .persona-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); width: min(480px, 92vw); max-height: 85vh; overflow-y: auto; padding: 18px 20px; position: relative; }
+  .persona-card::-webkit-scrollbar { width: 6px; }
+  .persona-card::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+  .persona-card h2 { font-size: 16px; font-weight: 600; color: var(--text); margin-right: 28px; }
+  .persona-card .pc-role { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+  .persona-card .pc-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.5; margin-top: 12px; white-space: pre-wrap; word-break: break-word; }
+  .persona-card .pc-quote { font-size: 12.5px; font-style: italic; color: var(--text-2); border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; margin-top: 12px; }
+  .persona-card .pc-close { position: absolute; top: 10px; right: 12px; width: 26px; height: 26px; border-radius: 5px; font-size: 15px; color: var(--text-3); cursor: pointer; }
+  .persona-card .pc-close:hover { color: var(--danger); background: var(--danger-soft); }
+  .persona-card .pc-section { margin-top: 14px; }
+  .persona-card .pc-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-4); margin-bottom: 5px; }
+  .persona-card .pc-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  .persona-card .pc-list li { font-size: 12px; color: var(--text-2); padding-left: 13px; position: relative; line-height: 1.4; }
+  .persona-card .pc-list li::before { content: '•'; position: absolute; left: 2px; color: var(--text-4); }
+  .persona-card .pc-list.pc-goals li::before { color: var(--accent-soft-text); }
+  .persona-card .pc-list.pc-frustrations li::before { color: var(--danger); }
+  .persona-card .pc-empty { font-size: 12px; color: var(--text-4); font-style: italic; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -281,6 +334,7 @@
   <button class="btn btn-ghost btn-sm" id="btn-export-json" aria-label="Export whole database as JSON" title="Export whole database as JSON">↧ Export JSON</button>
   <button class="btn btn-primary btn-sm" id="btn-export">↓ Export PNG</button>
   <input type="file" id="import-file" accept="application/json,.json" style="display:none">
+  <input type="file" id="shot-file" accept="image/*" multiple style="display:none">
 </header>
 
 <main>
@@ -294,7 +348,10 @@
 
     <div class="sidebar-section-header">
       Personas
-      <button class="btn-add" id="btn-add-persona" aria-label="New persona" title="New persona">+</button>
+      <span style="display:flex; gap:2px; align-items:center;">
+        <button class="btn-add" id="btn-import-personas" aria-label="Import personas from JSON" title="Import personas from JSON">↥</button>
+        <button class="btn-add" id="btn-add-persona" aria-label="New persona" title="New persona">+</button>
+      </span>
     </div>
     <ul id="persona-list" class="sb-list"></ul>
 
@@ -332,15 +389,17 @@ const LABEL_COL_W = 150;
 const STEP_COL_W  = 220;
 
 const SLICES = [
-  { key: 'action',     label: 'Actions' },
-  { key: 'touchpoint', label: 'Touchpoints' },
-  { key: 'mindset',    label: 'Mindset' },
-  { key: 'emotion',    label: 'Emotions' },
-  { key: 'pain-point', label: 'Pain points' },
-  { key: 'idea',       label: 'Ideas' },
-  { key: 'insight',    label: 'Insights' },
+  { key: 'action',      label: 'Actions' },
+  { key: 'touchpoint',  label: 'Touchpoints' },
+  { key: 'mindset',     label: 'Mindset' },
+  { key: 'emotion',     label: 'Emotions' },
+  { key: 'pain-point',  label: 'Pain points' },
+  { key: 'idea',        label: 'Ideas' },
+  { key: 'insight',     label: 'Insights' },
+  { key: 'screenshots', label: 'Screenshots' },
 ];
 const EMOTION_KEY = 'emotion';
+const SCREENSHOT_KEY = 'screenshots';
 const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1..5 low→high
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -367,7 +426,25 @@ function newJourney(title, personaId) {
   return { id: uid(), personaId: personaId ?? null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
 }
 function newCategory(name) { return { id: uid(), name, journeys: [] }; }
-function newPersona(name) { return { id: uid(), name }; }
+function newPersona(name) {
+  return { id: uid(), name, role: '', description: '', goals: [], needs: [], frustrations: [], quote: '' };
+}
+function normStrList(v) {
+  if (Array.isArray(v)) return v.map(x => String(x).trim()).filter(Boolean);
+  if (typeof v === 'string' && v.trim()) return [v.trim()];
+  return null;
+}
+function normalizePersona(p) {
+  if (!p || typeof p !== 'object') return p;
+  if (typeof p.name !== 'string') p.name = '';
+  if (typeof p.role !== 'string') p.role = '';
+  if (typeof p.description !== 'string') p.description = '';
+  if (typeof p.quote !== 'string') p.quote = '';
+  const g = normStrList(p.goals);       p.goals = g || [];
+  const n = normStrList(p.needs);       p.needs = n || [];
+  const f = normStrList(p.frustrations); p.frustrations = f || [];
+  return p;
+}
 
 function currentCategory() { return state.categories[state.activeCategory] ?? null; }
 function currentJourney() { return currentCategory()?.journeys[state.activeJourney] ?? null; }
@@ -450,6 +527,8 @@ function load() {
       const c = step.cells || (step.cells = {});
       SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
     }))));
+    if (!Array.isArray(state.personas)) state.personas = [];
+    state.personas.forEach(p => normalizePersona(p));
   } catch (e) { /* corrupt — keep defaults */ }
 }
 
@@ -479,6 +558,8 @@ function renameCategory(i, name) {
   save(); renderCategoryList();
 }
 function removeCategory(i) {
+  const cat = state.categories[i]; if (!cat) return;
+  cat.journeys.forEach(j => deleteShotIds(collectJourneyShotIds(j)));
   state.categories.splice(i, 1);
   if (state.categories.length === 0) state.categories.push(newCategory('Cash loan'));
   ensureActiveIndicesValid();
@@ -524,9 +605,10 @@ function createJourney(title) {
   _pendingRename = 'journey';
   save(); render();
 }
-function switchJourney(i) { state.activeJourney = i; save(); render(); }
+function switchJourney(i) { state.activeJourney = i; _activeShotsCell = null; save(); render(); }
 function removeJourney(i) {
   const cat = currentCategory(); if (!cat) return;
+  if (cat.journeys[i]) deleteShotIds(collectJourneyShotIds(cat.journeys[i]));
   cat.journeys.splice(i, 1);
   ensureActiveIndicesValid();
   save(); render();
@@ -561,6 +643,7 @@ function renameStage(stageId, name) {
 function removeStage(stageId) {
   const j = currentJourney(); if (!j) return;
   const idx = j.stages.findIndex(s => s.id === stageId); if (idx < 0) return;
+  (j.stages[idx].steps || []).forEach(step => deleteShotIds(collectStepShotIds(step)));
   j.stages.splice(idx, 1);
   if (j.stages.length === 0) j.stages.push(newStage('Stage 1'));
   save(); renderGrid();
@@ -588,6 +671,7 @@ function renameStep(stepId, name) {
 }
 function removeStep(stepId) {
   const r = findStep(stepId); if (!r) return;
+  deleteShotIds(collectStepShotIds(r.step));
   r.stage.steps.splice(r.stepIndex, 1);
   if (r.stage.steps.length === 0) r.stage.steps.push(newStep('Step 1'));
   save(); renderGrid();
@@ -644,6 +728,361 @@ function setEmotion(stepId, value) {
   save(); renderGrid();
 }
 
+// ─── Image store (IndexedDB — blobs never touch localStorage) ────────────────
+const IMAGES_DB_NAME = 'ux-customer-journey-images';
+let _imagesDb = null;
+function openImagesDb() {
+  if (_imagesDb) return Promise.resolve(_imagesDb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IMAGES_DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('images', { keyPath: 'id' }); };
+    req.onsuccess = () => { _imagesDb = req.result; resolve(_imagesDb); };
+    req.onerror = () => reject(req.error || new Error('IndexedDB unavailable'));
+  });
+}
+function dbPutImage(rec) {
+  return openImagesDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('images', 'readwrite');
+    tx.objectStore('images').put(rec);
+    tx.oncomplete = () => resolve(rec);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+function dbGetImage(id) {
+  return openImagesDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('images', 'readonly');
+    const rq = tx.objectStore('images').get(id);
+    rq.onsuccess = () => resolve(rq.result || null);
+    rq.onerror = () => reject(rq.error);
+  }));
+}
+function dbDeleteImage(id) {
+  return openImagesDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('images', 'readwrite');
+    tx.objectStore('images').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+function dataURLToBlob(dataURL) {
+  try {
+    const comma = String(dataURL).indexOf(',');
+    if (comma < 0) return null;
+    const head = String(dataURL).slice(0, comma);
+    const mime = (/:(.*?);/.exec(head) || [])[1] || 'image/png';
+    const bin = atob(String(dataURL).slice(comma + 1));
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  } catch (e) { return null; }
+}
+function imgElementFromBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+    img.src = url;
+  });
+}
+function imageDims(blob) {
+  if (window.createImageBitmap) {
+    return createImageBitmap(blob).then(bm => {
+      const d = { w: bm.width, h: bm.height };
+      if (bm.close) bm.close();
+      return d;
+    }).catch(() => imgElementFromBlob(blob).then(img => ({ w: img.naturalWidth, h: img.naturalHeight })));
+  }
+  return imgElementFromBlob(blob).then(img => ({ w: img.naturalWidth, h: img.naturalHeight }));
+}
+
+// object-URL cache for thumbnails (id → url), revoked on delete
+const _objUrls = new Map();
+function shotObjectUrl(id) {
+  if (_objUrls.has(id)) return Promise.resolve(_objUrls.get(id));
+  return dbGetImage(id).then(rec => {
+    if (!rec || !rec.blob) return null;
+    const url = URL.createObjectURL(rec.blob);
+    _objUrls.set(id, url);
+    return url;
+  }).catch(() => null);
+}
+function revokeShotUrl(id) {
+  if (_objUrls.has(id)) { URL.revokeObjectURL(_objUrls.get(id)); _objUrls.delete(id); }
+}
+
+// ─── Screenshots CRUD ────────────────────────────────────────────────────────
+let _activeShotsCell = null;   // last clicked Screenshots cell = paste target
+let _shotPickTarget = null;    // stepId for the hidden file picker
+
+async function addScreenshotsFromFiles(stepId, files) {
+  const r = findStep(stepId); if (!r) return;
+  const imgs = Array.from(files || []).filter(f => f && f.type && f.type.startsWith('image/'));
+  if (imgs.length === 0) { flashToast('No image files found'); return; }
+  let stored = 0, failed = 0;
+  for (const f of imgs) {
+    try {
+      const dims = await imageDims(f);
+      if (!dims.w || !dims.h) throw new Error('unreadable image');
+      const id = uid();
+      await dbPutImage({ id, blob: f, type: f.type, name: f.name || 'screenshot', w: dims.w, h: dims.h });
+      r.step.cells[SCREENSHOT_KEY].push({ id, w: dims.w, h: dims.h });
+      stored++;
+    } catch (e) { console.error(e); failed++; }
+  }
+  if (stored > 0) { save(); renderGrid(); }
+  if (failed > 0) flashToast("✗ Couldn't store " + failed + (failed === 1 ? ' image' : ' images'));
+}
+async function removeScreenshot(stepId, shotId) {
+  const r = findStep(stepId); if (!r) return;
+  const list = r.step.cells[SCREENSHOT_KEY]; if (!Array.isArray(list)) return;
+  const idx = list.findIndex(s => s.id === shotId); if (idx < 0) return;
+  list.splice(idx, 1);
+  save(); renderGrid();
+  revokeShotUrl(shotId);
+  try { await dbDeleteImage(shotId); } catch (e) { console.error(e); }
+}
+function pickScreenshots(stepId) {
+  _shotPickTarget = stepId;
+  document.getElementById('shot-file').click();
+}
+function onPasteImage(e) {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const files = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.kind === 'file' && it.type && it.type.startsWith('image/')) {
+      const f = it.getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  if (files.length === 0) return;
+  if (!_activeShotsCell) { flashToast('Click a Screenshots cell first'); return; }
+  e.preventDefault();
+  addScreenshotsFromFiles(_activeShotsCell.stepId, files);
+}
+
+// cascade helpers — delete orphaned blobs
+function collectStepShotIds(step) { return ((step.cells || {})[SCREENSHOT_KEY] || []).map(s => s.id); }
+function collectJourneyShotIds(j) {
+  const ids = [];
+  ((j && j.stages) || []).forEach(st => ((st && st.steps) || []).forEach(step => ids.push(...collectStepShotIds(step))));
+  return ids;
+}
+function deleteShotIds(ids) {
+  (ids || []).forEach(id => { dbDeleteImage(id).catch(() => {}); revokeShotUrl(id); });
+}
+
+// ─── Screenshots cell rendering ──────────────────────────────────────────────
+function buildScreenshots(step) {
+  const wrap = document.createElement('div');
+  wrap.className = 'shots';
+  const list = step.cells[SCREENSHOT_KEY] || [];
+  list.forEach((shot, idx) => {
+    const thumb = document.createElement('button');
+    thumb.type = 'button';
+    thumb.className = 'shot-thumb';
+    thumb.title = 'Open screenshot';
+    thumb.setAttribute('aria-label', `Screenshot ${idx + 1} of ${step.name} — open`);
+    thumb.style.aspectRatio = `${shot.w || 4} / ${shot.h || 3}`;
+    const img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    shotObjectUrl(shot.id).then(url => { if (url) img.src = url; });
+    thumb.appendChild(img);
+    thumb.addEventListener('click', e => {
+      e.stopPropagation();
+      _activeShotsCell = { stepId: step.id };
+      openLightbox(step.id, shot.id);
+    });
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'shot-remove';
+    rm.textContent = '×';
+    rm.setAttribute('aria-label', 'Remove screenshot');
+    rm.title = 'Remove screenshot';
+    rm.addEventListener('click', e => {
+      e.stopPropagation();
+      _activeShotsCell = { stepId: step.id };
+      removeScreenshot(step.id, shot.id);
+    });
+    thumb.appendChild(rm);
+    wrap.appendChild(thumb);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'shot-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Add screenshots (file picker, drag & drop, or Ctrl+V)';
+  addBtn.setAttribute('aria-label', `Add screenshots to ${step.name}`);
+  addBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    _activeShotsCell = { stepId: step.id };
+    pickScreenshots(step.id);
+  });
+  wrap.appendChild(addBtn);
+  return wrap;
+}
+function wireShotsCell(cellEl, step) {
+  cellEl.tabIndex = 0;
+  cellEl.addEventListener('click', () => { _activeShotsCell = { stepId: step.id }; });
+  cellEl.addEventListener('dragover', e => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+    e.preventDefault();
+    cellEl.classList.add('drag-over');
+  });
+  cellEl.addEventListener('dragleave', () => cellEl.classList.remove('drag-over'));
+  cellEl.addEventListener('drop', e => {
+    cellEl.classList.remove('drag-over');
+    if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+    e.preventDefault(); e.stopPropagation();
+    _activeShotsCell = { stepId: step.id };
+    addScreenshotsFromFiles(step.id, e.dataTransfer.files);
+  });
+}
+function openLightbox(stepId, shotId) {
+  const r = findStep(stepId); if (!r) return;
+  const shot = (r.step.cells[SCREENSHOT_KEY] || []).find(s => s.id === shotId); if (!shot) return;
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.id = 'lightbox';
+  overlay.className = 'overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Screenshot preview');
+  const img = document.createElement('img');
+  img.alt = `Screenshot — ${r.step.name}`;
+  overlay.appendChild(img);
+  shotObjectUrl(shotId).then(url => {
+    if (url) { img.src = url; }
+    else {
+      img.remove();
+      const ph = document.createElement('div');
+      ph.className = 'lb-missing';
+      ph.textContent = 'Image not found in local store';
+      overlay.insertBefore(ph, overlay.firstChild);
+    }
+  });
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'lb-close';
+  close.textContent = '×';
+  close.setAttribute('aria-label', 'Close');
+  close.title = 'Close (Escape)';
+  overlay.appendChild(close);
+  const cap = document.createElement('div');
+  cap.className = 'lb-caption';
+  cap.textContent = `${r.step.name} · ${shot.w || '?'}×${shot.h || '?'}`;
+  overlay.appendChild(cap);
+  function closeIt() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeIt(); } }
+  close.addEventListener('click', closeIt);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+  document.addEventListener('keydown', onKey, true);
+  document.body.appendChild(overlay);
+  close.focus();
+}
+
+// ─── Persona card (modal, read-only — source of truth is the personas file) ──
+let _personaCardTimer = null;
+function personaActivate(id) {
+  // delayed open so double-click rename doesn't fight with the modal
+  clearTimeout(_personaCardTimer);
+  _personaCardTimer = setTimeout(() => openPersonaCard(id), 230);
+}
+function openPersonaCard(personaId) {
+  const p = state.personas.find(x => x.id === personaId); if (!p) return;
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', `Persona — ${p.name}`);
+  const card = document.createElement('div');
+  card.className = 'persona-card';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'pc-close';
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close persona card');
+  closeBtn.title = 'Close (Escape)';
+  card.appendChild(closeBtn);
+
+  const h = document.createElement('h2');
+  h.textContent = p.name;
+  card.appendChild(h);
+  if (p.role) {
+    const role = document.createElement('div');
+    role.className = 'pc-role';
+    role.textContent = p.role;
+    card.appendChild(role);
+  }
+  if (p.description) {
+    const d = document.createElement('p');
+    d.className = 'pc-desc';
+    d.textContent = p.description;
+    card.appendChild(d);
+  }
+  if (p.quote) {
+    const q = document.createElement('blockquote');
+    q.className = 'pc-quote';
+    q.textContent = p.quote;
+    card.appendChild(q);
+  }
+  let listCount = 0;
+  [['Goals', p.goals, 'pc-goals'], ['Needs', p.needs, ''], ['Frustrations', p.frustrations, 'pc-frustrations']].forEach(([label, items, mod]) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    listCount++;
+    const sec = document.createElement('div');
+    sec.className = 'pc-section';
+    const lab = document.createElement('div');
+    lab.className = 'pc-label';
+    lab.textContent = label;
+    const ul = document.createElement('ul');
+    ul.className = 'pc-list' + (mod ? ' ' + mod : '');
+    items.forEach(it => {
+      const li = document.createElement('li');
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+    sec.appendChild(lab); sec.appendChild(ul);
+    card.appendChild(sec);
+  });
+  if (!p.role && !p.description && !p.quote && listCount === 0) {
+    const e = document.createElement('div');
+    e.className = 'pc-empty';
+    e.textContent = 'No details yet — import personas from JSON (↥) to fill this card.';
+    card.appendChild(e);
+  }
+  overlay.appendChild(card);
+  function closeIt() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeIt(); } }
+  closeBtn.addEventListener('click', closeIt);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+  document.addEventListener('keydown', onKey, true);
+  document.body.appendChild(overlay);
+  closeBtn.focus();
+}
+
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const categoryList  = document.getElementById('category-list');
 const personaList   = document.getElementById('persona-list');
@@ -660,6 +1099,7 @@ const sidebarResizer= document.getElementById('sidebar-resizer');
 
 // ─── Inline edit helper ───────────────────────────────────────────────────────
 function startEdit(spanEl, current, onCommit) {
+  clearTimeout(_personaCardTimer); // double-click rename cancels pending persona card open
   const input = document.createElement('input');
   input.className = 'rename-input';
   input.value = current;
@@ -738,7 +1178,7 @@ function renderPersonaList() {
       name: p.name,
       active: false,
       draggable: true,
-      onActivate: () => {},
+      onActivate: () => personaActivate(p.id),
       onRename: v => renamePersona(i, v),
       onRemove: () => removePersona(i),
       onMove: (from, to) => movePersona(from, to),
@@ -746,7 +1186,7 @@ function renderPersonaList() {
     });
     personaList.appendChild(li);
   });
-  if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">No personas — add one (+).</li>';
+  if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">No personas — add one (+) or import (↥).</li>';
 }
 
 // ─── Sidebar: journeys ────────────────────────────────────────────────────────
@@ -918,8 +1358,23 @@ function renderJourneyMeta() {
   const noneOpt = document.createElement('option'); noneOpt.value = ''; noneOpt.textContent = '— none —'; psel.appendChild(noneOpt);
   state.personas.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; psel.appendChild(o); });
   psel.value = j.personaId ?? '';
-  psel.addEventListener('change', () => { j.personaId = psel.value ? Number(psel.value) : null; save(); renderJourneyList(); });
-  personaWrap.appendChild(plab); personaWrap.appendChild(psel);
+  const infoBtn = document.createElement('button');
+  infoBtn.type = 'button';
+  infoBtn.className = 'btn btn-ghost btn-sm';
+  infoBtn.textContent = 'ⓘ';
+  infoBtn.title = 'View persona card';
+  infoBtn.setAttribute('aria-label', 'View persona card');
+  infoBtn.disabled = j.personaId == null;
+  infoBtn.addEventListener('click', () => { if (j.personaId != null) openPersonaCard(j.personaId); });
+  psel.addEventListener('change', () => {
+    j.personaId = psel.value ? Number(psel.value) : null;
+    infoBtn.disabled = j.personaId == null;
+    save(); renderJourneyList();
+  });
+  const pRow = document.createElement('div');
+  pRow.style.display = 'flex'; pRow.style.gap = '4px'; pRow.style.alignItems = 'center';
+  pRow.appendChild(psel); pRow.appendChild(infoBtn);
+  personaWrap.appendChild(plab); personaWrap.appendChild(pRow);
   row1.appendChild(personaWrap);
 
   journeyMeta.appendChild(row1);
@@ -1103,12 +1558,13 @@ function renderGrid() {
       const colNum = 2 + col;
       const step = f.step;
       const cellEl = document.createElement('div');
-      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '');
+      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '') + (slice.key === SCREENSHOT_KEY ? ' shots-cell' : '');
       cellEl.setAttribute('role', 'gridcell');
       cellEl.setAttribute('aria-label', cellAriaLabel(slice, step));
       place(cellEl, row, colNum);
 
       if (slice.key === EMOTION_KEY) cellEl.appendChild(buildEmotion(step));
+      else if (slice.key === SCREENSHOT_KEY) { wireShotsCell(cellEl, step); cellEl.appendChild(buildScreenshots(step)); }
       else cellEl.appendChild(buildCellElements(step, slice.key));
       rs.appendChild(cellEl);
     });
@@ -1121,6 +1577,9 @@ function cellAriaLabel(slice, step) {
   if (slice.key === EMOTION_KEY) {
     const v = step.cells[EMOTION_KEY];
     detail = (v != null) ? `emotion ${v} of 5` : 'emotion not rated';
+  } else if (slice.key === SCREENSHOT_KEY) {
+    const l = step.cells[SCREENSHOT_KEY] || [];
+    detail = l.length ? `${l.length} ${plural(l.length, 'screenshot', 'screenshots')}` : 'no screenshots';
   } else {
     const list = step.cells[slice.key] || [];
     detail = list.map(e => e.text).filter(Boolean).join('; ') || 'empty';
@@ -1214,11 +1673,37 @@ function cssVar(name, fallback) {
   return v || fallback;
 }
 
-function exportPng() {
+// layout plan for a row of screenshot thumbnails inside a column (no bitmaps needed — uses metadata)
+function shotDrawPlan(shots, availW, maxH) {
+  const n = shots.length;
+  if (!n) return null;
+  const gap = 6;
+  const slotW = Math.max(12, (availW - gap * (n - 1)) / n);
+  const places = shots.map(s => {
+    const w = s.w || 1, h = s.h || 1;
+    let dw = slotW, dh = h * (slotW / w);
+    if (dh > maxH) { dh = maxH; dw = w * (maxH / h); }
+    return { dw: Math.round(dw), dh: Math.round(dh) };
+  });
+  return { slotW, gap, places, contentH: Math.max(12, ...places.map(p => p.dh)) };
+}
+
+async function exportPng() {
   const j = currentJourney(); if (!j) return;
   const flat = [];
   j.stages.forEach(st => st.steps.forEach(step => flat.push({ stage: st, step })));
   if (flat.length === 0) return;
+
+  // pre-load screenshot bitmaps (missing blobs draw a dashed placeholder)
+  const shotBmps = new Map();
+  await Promise.all(flat.map(f => Promise.all(((f.step.cells || {})[SCREENSHOT_KEY] || []).map(async s => {
+    try {
+      const rec = await dbGetImage(s.id);
+      if (!rec || !rec.blob) return;
+      if (window.createImageBitmap) { shotBmps.set(s.id, await createImageBitmap(rec.blob)); }
+      else { const img = await imgElementFromBlob(rec.blob); if (img) shotBmps.set(s.id, img); }
+    } catch (e) { /* placeholder */ }
+  }))));
 
   const C = {
     bg: cssVar('--bg', '#fff'), panel: cssVar('--panel', '#fff'), panel2: cssVar('--panel-2', '#f1f3f5'),
@@ -1245,6 +1730,14 @@ function exportPng() {
   }
 
   const sliceRows = SLICES.map(slice => {
+    if (slice.key === SCREENSHOT_KEY) {
+      let maxH = 0, any = false;
+      flat.forEach(f => {
+        const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16, 72);
+        if (plan) { any = true; maxH = Math.max(maxH, plan.contentH); }
+      });
+      return { slice, h: any ? maxH + 14 : 34 };
+    }
     let maxLines = 1;
     flat.forEach(f => {
       if (slice.key === EMOTION_KEY) { maxLines = Math.max(maxLines, 1); return; }
@@ -1313,6 +1806,29 @@ function exportPng() {
           ctx.fillStyle = EMO_COLORS[v - 1];
           for (let k = 0; k < v; k++) { ctx.beginPath(); ctx.arc(x1 + 12 + k * 16, y + h / 2, 5, 0, Math.PI * 2); ctx.fill(); }
         } else { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
+      } else if (slice.key === SCREENSHOT_KEY) {
+        const shots = (f.step.cells || {})[SCREENSHOT_KEY] || [];
+        if (shots.length === 0) { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + 17); }
+        else {
+          const plan = shotDrawPlan(shots, colW - 16, 72);
+          let sx = x1 + 8;
+          shots.forEach((s, k) => {
+            const { dw, dh } = plan.places[k];
+            const dx = sx + (plan.slotW - dw) / 2;
+            const dy = y + (h - dh) / 2;
+            const bm = shotBmps.get(s.id);
+            if (bm) { try { ctx.drawImage(bm, dx, dy, dw, dh); } catch (err) { /* skip */ } }
+            else {
+              ctx.setLineDash([4, 3]);
+              ctx.strokeStyle = C.border;
+              ctx.strokeRect(dx, dy, dw, dh);
+              ctx.setLineDash([]);
+            }
+            ctx.strokeStyle = C.borderSoft;
+            ctx.strokeRect(dx + 0.5, dy + 0.5, dw - 1, dh - 1);
+            sx += plan.slotW + plan.gap;
+          });
+        }
       } else {
         const list = f.step.cells[slice.key] || [];
         let ty = y + 16;
@@ -1337,6 +1853,7 @@ function exportPng() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     btnExport.textContent = '✓ Saved';
     setTimeout(() => { btnExport.textContent = '↓ Export PNG'; }, 1500);
+    shotBmps.forEach(bm => { if (bm.close) bm.close(); });
   }, 'image/png');
 }
 
@@ -1359,18 +1876,44 @@ function downloadJson(data, filename) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-function exportDatabase() {
+function stepsOfJourney(j, into) {
+  ((j && j.stages) || []).forEach(st => ((st && st.steps) || []).forEach(step => into.push(step)));
+  return into;
+}
+async function exportImagesForSteps(steps) {
+  const out = [];
+  for (const step of steps) {
+    for (const s of ((step.cells || {})[SCREENSHOT_KEY] || [])) {
+      try {
+        const rec = await dbGetImage(s.id);
+        if (!rec || !rec.blob) continue;
+        out.push({ id: s.id, name: rec.name || 'screenshot', type: rec.type || rec.blob.type || 'image/png', w: s.w, h: s.h, data: await blobToDataURL(rec.blob) });
+      } catch (e) { /* skip missing */ }
+    }
+  }
+  return out;
+}
+async function exportDatabase() {
+  const steps = [];
+  state.categories.forEach(cat => (cat.journeys || []).forEach(j => stepsOfJourney(j, steps)));
+  const images = await exportImagesForSteps(steps);
   const data = { version: 1, kind: 'database', app: 'customer-journey',
     categories: JSON.parse(JSON.stringify(state.categories)),
-    personas: JSON.parse(JSON.stringify(state.personas)) };
+    personas: JSON.parse(JSON.stringify(state.personas)),
+    images };
   downloadJson(data, 'customer-journey-backup-' + dateStamp() + '.json');
   flashToast('✓ Database exported');
 }
-function exportJourney() {
+async function exportJourney() {
   const j = currentJourney(); if (!j) return;
-  const persona = j.personaId != null ? { name: personaName(j.personaId) } : null;
+  const images = await exportImagesForSteps(stepsOfJourney(j, []));
+  let persona = null;
+  if (j.personaId != null) {
+    const p = state.personas.find(x => x.id === j.personaId);
+    if (p) persona = normalizePersona(JSON.parse(JSON.stringify(p)));
+  }
   const data = { version: 1, kind: 'journey', app: 'customer-journey',
-    journey: JSON.parse(JSON.stringify(j)), persona };
+    journey: JSON.parse(JSON.stringify(j)), persona, images };
   downloadJson(data, safeFilename(j.title) + '.json');
   flashToast('✓ Journey exported');
 }
@@ -1397,36 +1940,98 @@ function regenStep(step) { step.id = uid(); SLICES.forEach(s => { if (s.key !== 
 function regenStage(st) { st.id = uid(); (st.steps || []).forEach(regenStep); }
 function regenJourney(j) { j.id = uid(); (j.stages || []).forEach(regenStage); }
 
-function importDatabase(data) {
+async function importImagesIntoDb(data, steps) {
+  const imgs = Array.isArray(data && data.images) ? data.images : [];
+  if (imgs.length === 0 || steps.length === 0) return;
+  const map = new Map();
+  for (const rec of imgs) {
+    if (!rec || rec.id == null || typeof rec.data !== 'string') continue;
+    const blob = dataURLToBlob(rec.data);
+    if (!blob) continue;
+    const newId = uid();
+    try {
+      await dbPutImage({ id: newId, blob, type: rec.type || blob.type, name: rec.name || 'screenshot', w: rec.w || 0, h: rec.h || 0 });
+      map.set(rec.id, newId);
+    } catch (e) { console.error(e); }
+  }
+  if (map.size === 0) return;
+  steps.forEach(step => {
+    const list = (step.cells || {})[SCREENSHOT_KEY];
+    if (!Array.isArray(list)) return;
+    step.cells[SCREENSHOT_KEY] = list.filter(s => map.has(s.id)).map(s => ({ id: map.get(s.id), w: s.w, h: s.h }));
+  });
+}
+function importPersonas(data) {
+  const list = Array.isArray(data.personas) ? data.personas : [];
+  let added = 0, updated = 0;
+  const seen = new Set();
+  list.forEach(src => {
+    if (!src || typeof src !== 'object' || typeof src.name !== 'string' || !src.name.trim()) return;
+    const name = src.name.trim();
+    const key = name.toLowerCase();
+    if (seen.has(key)) return; // duplicate names in one file — first wins
+    seen.add(key);
+    let p = state.personas.find(x => x.name.trim().toLowerCase() === key);
+    if (!p) { p = newPersona(name); state.personas.push(p); added++; }
+    else updated++;
+    if (typeof src.role === 'string' && src.role.trim()) p.role = src.role.trim();
+    if (typeof src.description === 'string' && src.description.trim()) p.description = src.description.trim();
+    if (typeof src.quote === 'string' && src.quote.trim()) p.quote = src.quote.trim();
+    const g = normStrList(src.goals);       if (g) p.goals = g;
+    const n = normStrList(src.needs);       if (n) p.needs = n;
+    const f = normStrList(src.frustrations); if (f) p.frustrations = f;
+  });
+  save(); render();
+  return { added, updated };
+}
+async function importDatabase(data) {
+  // replace-all → delete every existing screenshot blob first
+  const oldIds = [];
+  state.categories.forEach(cat => (cat.journeys || []).forEach(j => collectJourneyShotIds(j).forEach(id => oldIds.push(id))));
+  deleteShotIds(oldIds);
   const personas = Array.isArray(data.personas) ? data.personas : [];
+  personas.forEach(p => normalizePersona(p));
   const personaMap = {};
   personas.forEach(p => { const old = p.id; p.id = uid(); personaMap[old] = p.id; });
   const categories = Array.isArray(data.categories) ? data.categories : [];
+  const steps = [];
   categories.forEach(cat => {
     cat.id = uid();
     (cat.journeys || []).forEach(j => {
       normalizeJourney(j); regenJourney(j);
+      stepsOfJourney(j, steps);
       j.personaId = (j.personaId != null && personaMap[j.personaId] != null) ? personaMap[j.personaId] : null;
     });
   });
+  await importImagesIntoDb(data, steps);
   state.categories = categories;
   state.personas = personas;
   state.activeCategory = 0; state.activeJourney = 0;
+  _activeShotsCell = null;
   ensureActiveIndicesValid();
   save(); render();
 }
-function importJourney(data) {
+async function importJourney(data) {
   let cat = currentCategory();
   if (!cat) { cat = newCategory('Cash loan'); state.categories.push(cat); state.activeCategory = state.categories.length - 1; state.activeJourney = 0; }
   let personaId = null;
   if (data.persona && data.persona.name) {
-    let p = state.personas.find(x => x.name === data.persona.name);
-    if (!p) { p = newPersona(data.persona.name); state.personas.push(p); }
+    let p = state.personas.find(x => x.name.trim().toLowerCase() === String(data.persona.name).trim().toLowerCase());
+    if (!p) { p = newPersona(String(data.persona.name)); state.personas.push(p); }
+    // fill fields from the snapshot (import wins over empty local)
+    const sp = normalizePersona({ ...data.persona });
+    if (sp.role && !p.role) p.role = sp.role;
+    if (sp.description && !p.description) p.description = sp.description;
+    if (sp.quote && !p.quote) p.quote = sp.quote;
+    if (sp.goals.length && !p.goals.length) p.goals = sp.goals;
+    if (sp.needs.length && !p.needs.length) p.needs = sp.needs;
+    if (sp.frustrations.length && !p.frustrations.length) p.frustrations = sp.frustrations;
     personaId = p.id;
   } else if (state.personas[0]) personaId = state.personas[0].id;
   const j = data.journey || data;
   normalizeJourney(j); regenJourney(j);
   j.personaId = personaId;
+  await importImagesIntoDb(data, stepsOfJourney(j, []));
   cat.journeys.push(j);
   state.activeJourney = cat.journeys.length - 1;
   save(); render();
@@ -1434,23 +2039,26 @@ function importJourney(data) {
 function importFromFile(file) {
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = e => { (async () => {
     let data;
     try { data = JSON.parse(e.target.result); } catch (err) { flashToast('✗ Invalid file'); return; }
     try {
       if (data && (data.kind === 'database' || Array.isArray(data.categories))) {
         if (!confirm('Replace ALL data with this imported file? This cannot be undone.')) { flashToast('Import cancelled'); return; }
-        importDatabase(data);
+        await importDatabase(data);
         const nj = state.categories.reduce((a, c) => a + (c.journeys?.length || 0), 0);
         flashToast(`✓ Imported (${nj} journeys)`);
+      } else if (data && data.kind === 'personas' && Array.isArray(data.personas)) {
+        const r = importPersonas(data);
+        flashToast(`✓ Personas imported (${r.added} added, ${r.updated} updated)`);
       } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
-        importJourney(data);
+        await importJourney(data);
         flashToast('✓ Journey imported');
       } else {
         flashToast('✗ Invalid file');
       }
     } catch (err) { console.error(err); flashToast('✗ Invalid file'); }
-  };
+  })(); };
   reader.onerror = () => flashToast('✗ Invalid file');
   reader.readAsText(file);
 }
@@ -1485,6 +2093,14 @@ const importInput = document.getElementById('import-file');
 btnExportJson.addEventListener('click', exportDatabase);
 btnImport.addEventListener('click', () => importInput.click());
 importInput.addEventListener('change', () => { importFromFile(importInput.files[0]); importInput.value = ''; });
+document.getElementById('btn-import-personas').addEventListener('click', () => importInput.click());
+const shotInput = document.getElementById('shot-file');
+shotInput.addEventListener('change', () => {
+  if (_shotPickTarget != null) addScreenshotsFromFiles(_shotPickTarget, shotInput.files);
+  _shotPickTarget = null;
+  shotInput.value = '';
+});
+document.addEventListener('paste', onPasteImage);
 
 // sidebar resize
 const SB_MIN = 160, SB_MAX = 420;

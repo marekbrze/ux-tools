@@ -8,7 +8,7 @@ Build rules and design system: see [`../CLAUDE.md`](../CLAUDE.md).
 
 | Tool | What it does | Link (GitHub Pages) |
 |-----------|---------|---------------------|
-| [customer-journey](./customer-journey/) | Customer-journey map editor — a grid of stages/steps × 7 slices (NN/g), categories/personas/CJ CRUD, drag & drop, PNG export | [Open](https://marekbrze.github.io/ux-tools/apps/customer-journey/) |
+| [customer-journey](./customer-journey/) | Customer-journey map editor — a grid of stages/steps × slices (NN/g), step screenshots (IndexedDB), persona library with JSON import, drag & drop, PNG export | [Open](https://marekbrze.github.io/ux-tools/apps/customer-journey/) |
 
 <!--
 Entry format after adding a tool:
