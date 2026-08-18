@@ -371,3 +371,87 @@ Import tolerance: only `name` required; lists as `string[]` OR string (→ singl
 13. **Journey-meta**: next to the persona select an ⓘ button (`btn-ghost btn-sm`, disabled when `personaId == null`) → `openPersonaCard(j.personaId)`. `exportJourney()`: persona snapshot = full object (not just `name`); `importJourney()` — match by name unchanged, use full fields for a new persona.
 14. **CSS** (tokens only!): `.shots` (flex-wrap, gap 4px), `.shot-thumb` (border, radius 4, hover border-accent), `.shot-remove` (hover-reveal), `.shot-add` (dashed), `.g-cell.shots-cell.drag-over` (accent), lightbox + persona-card (overlay, panel, shadow), `.pc-list`/`.pc-label`. A11y: thumbnails as buttons with `aria-label`; dialogs with `aria-modal`; focus-visible everywhere.
 15. **Regression**: all existing flows (grid, element drag & drop, emotion, PNG, database/journey export/import, theme, sidebar) work unchanged; `SLICES` +1 row → PNG/ARIA/normalization consistent.
+
+### Change 8 — feature: stage removal + brand themes via JSON (2026-08-18)
+**Status**: planned — route to ux-build
+
+**User goal**
+1. Stages can only be added today — there is no way to delete one from the UI, which makes restructuring a CJ painful.
+2. Export CJs in a client's brand colors (first up: Bank Millennium), with the theme definitions living as JSON in the private `marekbrze/business` repo — the same source-of-truth + JSON-import pattern as personas.
+
+**MVP scope**
+- **A. Stage delete**: hover-reveal × on the stage header (`​.g-stage`) → calls the existing (currently unreachable) `removeStage()`. Immediate, no confirm — consistent with step/category deletes. Existing rules kept: screenshot blobs cascade, a journey never drops below one (fresh "Stage 1").
+- **B. Brand themes**: `brandTheme` entity (`name` + role-based color keys) in `state.brandThemes` (localStorage — tiny, no blobs); **per-journey** `journey.brandThemeId` (null = app theme; the persona pattern: library in the sidebar + select in journey-meta). A **Themes** sidebar section with ↥ import / ↧ export (`kind: 'themes'` JSON, merge by name — symmetric with personas). An applied theme restyles the **grid preview** (inline CSS custom properties scoped to the grid area) **and** the **PNG export**. Seeds a built-in **"Bank Millennium"** theme (researched starter values, correctable by editing the repo JSON and re-importing).
+
+**Later (deferred)**
+- In-app theme editing (color pickers), duplicate/rename a theme.
+- Themeable emotion scale (`colors.emotions`, 5 colors replacing `EMO_COLORS`).
+- Contrast warning when a theme combination is below WCAG AA.
+- Theme extras beyond colors (logo, fonts are out of scope by design — offline/system fonts).
+
+**Impact**
+- **Data**: + `state.brandThemes: [{ id, name, colors: {role: hex} }]`; + `journey.brandThemeId: number | null`. localStorage only. **No key version bump** — `load()` normalizes (`Array.isArray(state.brandThemes)`; `brandThemeId` optional → null). `exportDatabase()`/`importDatabase()` carry `brandThemes` (ID regeneration + `themeMap` remap of `journey.brandThemeId`, mirroring the persona map); `exportJourney()` carries `theme: {name}` snapshot, `importJourney()` matches by name.
+- **Actions**: `importBrandThemes(data)` (merge by name, case-insensitive, per-key colors merge), `exportBrandThemes()` (download → commit to the business repo), `setJourneyBrandTheme(id|null)`, `removeBrandTheme(i)` (nulls out `brandThemeId` on journeys using it), `applyBrandThemeToGrid()`; UI wiring for the existing `removeStage(stageId)`.
+- **Screens**: × on the stage header (hover-reveal, pattern of `.step-remove`); **Themes** sidebar section between Personas and Customer journeys (compact — short list; ↥ ↧ in the section header, hover × per item, click = apply to the current journey, click again = back to app theme); **Theme** select in journey-meta row 1 next to Persona (`— app theme —` + theme names).
+- **States**: empty Themes list ("No themes — import (↥) or export the starter set (↧)"); journey referencing a deleted theme → renders with the app theme; invalid/partial JSON: themes without `name` skipped, invalid hex values dropped per key, unknown keys ignored, missing keys fall back to app tokens; toasts `✓ Themes imported (N added, M updated)` / `✗ Invalid file`; theme with no journey open → toast "Open a journey first".
+- **Interactions**: import via the hidden file input — `importFromFile()` detection order becomes `database → personas → themes → journey → invalid`; export via `<a download>`; the themed grid preview updates live on select change (theme overrides light/dark for the grid area only — brand colors are absolute by design).
+- **Edge cases**: deleting the last stage → journey resets to a fresh "Stage 1" (existing `removeStage` rule); stage delete cascades its steps' screenshot blobs (existing); re-importing a theme with the same name overwrites its colors per key (how the Millennium starter gets corrected); a database backup without `brandThemes` → keeps current themes (and the boot seed re-adds Millennium if missing).
+- **Glossary**: `brand theme` (`brand-theme` — distinct from `theme` = UI light/dark/auto), `theme roles` (`theme-roles`), `themes import` (`themes-import`), `themes export` (`themes-export`).
+
+**Theme color contract — role keys** (each optional; every role falls back to the app token in the active UI theme, so a partial theme is legal):
+
+| Role | Grid element | Export element | Fallback token |
+|------|--------------|----------------|----------------|
+| `bg` | `#grid-scroll` background | canvas background | `--bg` |
+| `stageBg` | `.g-stage` band | stage band fill | `--panel-3` |
+| `stageText` | `.g-stage .stage-name` | stage band text | `--text-2` (via `--cj-stage-text`) |
+| `stepBg` | `.g-step` header | step header fill | `--panel` |
+| `labelBg` | `.g-slice-label` + `.g-corner` | slice-label column + "Step" corner | `--panel-2` |
+| `labelText` | `.g-slice-label` text | slice labels + "—" placeholders | `--text-3` |
+| `cellBg` | `.g-cell` | data cell fill | `--cell` |
+| `text` | `.g-step .step-name`, `.el-text` | step names, cell text, title | `--text-2` |
+| `border` | grid borders | strong borders | `--border` |
+| `borderSoft` | cell separators | soft borders | `--border-soft` |
+| `accent` | grid hover/focus accents | journey title text | `--accent` |
+
+**`kind: 'themes'` contract format** (authored/stored in `marekbrze/business`, e.g. `customer-journey/themes.json`):
+```json
+{
+  "version": 1,
+  "kind": "themes",
+  "app": "customer-journey",
+  "themes": [
+    {
+      "name": "Bank Millennium",
+      "colors": {
+        "bg": "#ffffff",
+        "stageBg": "#c60052",
+        "stageText": "#ffffff",
+        "stepBg": "#ffffff",
+        "labelBg": "#fbe8f0",
+        "labelText": "#a33164",
+        "cellBg": "#ffffff",
+        "text": "#24292e",
+        "border": "#e8cbd8",
+        "borderSoft": "#f4e6ed",
+        "accent": "#c60052"
+      }
+    }
+  ]
+}
+```
+Import tolerance: `name` required (trim); `colors` optional object; per-key value must match `/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i` — invalid values dropped per key, unknown keys ignored; merging by name overwrites only the keys present in the file (missing keys keep current values). The Millennium hexes are researched public brand values (`#c60052` = official logotype magenta) — starters, not gospel; correct them in the repo file.
+
+**Build instructions for ux-build**
+1. **Stage delete UI** — in `renderGrid()`'s stage cell construction (index.html:1451-1490), after `addStepBtn`: a `<button class="stage-remove">×</button>` styled exactly like `.g-step .step-remove` (opacity 0 → 1 on `.g-stage:hover`, `--danger` on hover), `aria-label="Remove stage {name}"`, click → `e.stopPropagation(); removeStage(st.id);`. No changes to `removeStage()` itself — it already cascades blobs and keeps ≥1 stage.
+2. **State** — `state.brandThemes: []` in the state literal; `journey.brandThemeId: null` in `newJourney()`; set in `normalizeJourney()` (`if (j.brandThemeId == null) j.brandThemeId = null;` — also on old data in `load()`'s normalization walk). Constants: `const THEME_ROLES = ['bg','stageBg','stageText','stepBg','labelBg','labelText','cellBg','text','border','borderSoft','accent'];` and `ROLE_FALLBACK_TOKEN = { bg:'--bg', stageBg:'--panel-3', stepBg:'--panel', labelBg:'--panel-2', cellBg:'--cell', labelText:'--text-3', text:'--text-2', border:'--border', borderSoft:'--border-soft', accent:'--accent' };` (`stageText` has no direct token — see step 4).
+3. **normalize/import** — `normalizeBrandTheme(t)`: name string + trim required (else drop), `colors` filtered to `THEME_ROLES` keys with valid hex. `importBrandThemes(data)` mirrors `importPersonas()`: merge by name (trim, case-insensitive), new → `{ id: uid(), name, colors }`, existing → per-key color overwrite; returns `{added, updated}`; toast `✓ Themes imported (N added, M updated)`. In `importFromFile()` insert the branch after `personas`: `data.kind === 'themes' && Array.isArray(data.themes)` → `importBrandThemes(data)`.
+4. **Grid preview** — `applyBrandThemeToGrid()`: called from `renderGrid()` (top). Finds `currentJourney().brandThemeId` → theme (defensive lookup; missing → treat as null). On `#grid-scroll` (or `#grid`) set inline custom properties: for each present role set the mapped token name (`gridScroll.style.setProperty('--panel-3', t.colors.stageBg)` etc.), `stageText` → `'--cj-stage-text'`; when no theme active → `removeProperty` for all (restore app tokens). CSS: add `.g-stage .stage-name { color: var(--cj-stage-text, var(--text-2)); }` — everything else in the grid already consumes the tokens being overridden.
+5. **PNG export** — in `exportPng()`: build `C` from the active brand theme with `cssVar(ROLE_FALLBACK_TOKEN[role])` fallbacks; stage band drawn with `C.stageBg` + `C.stageText`; journey title in `C.accent`; slice-label band/corner with `labelBg`/`labelText`; placeholders "—" use `labelText`.
+6. **Sidebar Themes section** — HTML between the Personas and Customer journeys blocks: section header "Themes" with ↥ (`#btn-import-themes`, opens the same hidden import input) and ↧ (`#btn-export-themes` → `exportBrandThemes()`); `<ul id="theme-list" class="sb-list">` (compact `max-height`, e.g. 18% — the list is short; shave the persona list a few %). `renderThemeList()` via `mkSidebarItem({ name, active: j?.brandThemeId === t.id, onActivate: () => setJourneyBrandTheme(active ? null : t.id), onRemove: () => removeBrandTheme(i) })` — **no drag handle, no rename** (extend `mkSidebarItem`: skip the ⠿ handle + drag wiring when `!draggable`, skip the ✎ button when `onRename` is not passed; existing callers unchanged). Guard `onActivate` with `currentJourney()` → else `flashToast('Open a journey first')`. `renderThemeList` joins `render()`.
+7. **Actions** — `setJourneyBrandTheme(id)`: `j.brandThemeId = id ?? null; save(); renderJourneyMeta(); renderThemeList(); renderGrid();` · `removeBrandTheme(i)`: splice, then `state.categories.forEach(cat => cat.journeys.forEach(j => { if (j.brandThemeId === removedId) j.brandThemeId = null; }))`, `save(); render();` · `exportBrandThemes()`: `{ version:1, kind:'themes', app:'customer-journey', themes: state.brandThemes.map(t => ({ name: t.name, colors: t.colors })) }` → `downloadJson(..., 'customer-journey-themes.json')` (stable name, no date stamp — a repo file) + toast.
+8. **Journey-meta** — in row 1 next to the persona select: a Theme select (label "Theme", `— app theme —` value `''` + one option per theme), value = `j.brandThemeId ?? ''`, `change` → `setJourneyBrandTheme(value ? Number(value) : null)`.
+9. **JSON export/import** — `exportDatabase()`: add `brandThemes: state.categories…` → `brandThemes: JSON.parse(JSON.stringify(state.brandThemes))`; `importDatabase()`: `const themes = Array.isArray(data.brandThemes) ? data.brandThemes : state.brandThemes;` + regen ids into `themeMap` + remap `j.brandThemeId` (personaMap pattern). `exportJourney()`: + `theme: theme ? { name: theme.name } : null`; `importJourney()`: match by name (case-insensitive) → `j.brandThemeId` else null.
+10. **Boot seed** — in the boot IIFE after `load()`: if no theme named "Bank Millennium" (case-insensitive) → push the built-in object from the contract example above. Re-checked every boot, so it survives imports/wipes; overwriting it via repo import works by name.
+11. **CSS** — `.g-stage .stage-remove` (hover-reveal ×); the `--cj-stage-text` rule; `#theme-list` sizing. Tokens only, both app themes AA as today (brand themes are the author's contrast responsibility — noted as Later).
+12. **Regression** — app `theme` (light/dark/auto) untouched and still wins when a journey has no brand theme; all existing flows (grid, drag & drop, emotion, screenshots, PNG, JSON export/import, sidebar) unchanged; `mkSidebarItem` extension is additive.
