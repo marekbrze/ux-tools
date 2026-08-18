@@ -423,13 +423,6 @@ const ROLE_FALLBACK_TOKEN = {
   labelText: '--text-3', text: '--text-2', border: '--border', borderSoft: '--border-soft', accent: '--accent',
 };
 const BRAND_THEME_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const BUILT_IN_THEMES = [
-  { name: 'Bank Millennium', colors: {
-    bg: '#ffffff', stageBg: '#c60052', stageText: '#ffffff', stepBg: '#ffffff',
-    labelBg: '#fbe8f0', labelText: '#a33164', cellBg: '#ffffff', text: '#24292e',
-    border: '#e8cbd8', borderSoft: '#f4e6ed', accent: '#c60052',
-  } },
-];
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
@@ -579,7 +572,8 @@ function removeBrandTheme(i) {
   save(); render();
 }
 function importBrandThemes(data) {
-  const list = Array.isArray(data.themes) ? data.themes : [];
+  // tolerant shapes: full contract {kind:'themes', themes:[...]}, {themes:[...]}, or a bare array
+  const list = Array.isArray(data) ? data : (Array.isArray(data.themes) ? data.themes : []);
   let added = 0, updated = 0;
   const seen = new Set();
   list.forEach(src => {
@@ -1309,7 +1303,7 @@ function renderThemeList() {
     });
     themeList.appendChild(li);
   });
-  if (state.brandThemes.length === 0) themeList.innerHTML = '<li class="sb-empty">No themes yet — import (↥) a themes JSON file.</li>';
+  if (state.brandThemes.length === 0) themeList.innerHTML = '<li class="sb-empty">No themes yet — ↥ import a themes JSON file (a bare list of {name, colors} works too).</li>';
 }
 
 // ─── Sidebar: journeys ────────────────────────────────────────────────────────
@@ -2233,7 +2227,8 @@ function importFromFile(file) {
       } else if (data && data.kind === 'personas' && Array.isArray(data.personas)) {
         const r = importPersonas(data);
         flashToast(`✓ Personas imported (${r.added} added, ${r.updated} updated)`);
-      } else if (data && data.kind === 'themes' && Array.isArray(data.themes)) {
+      } else if (data && (data.kind === 'themes' || Array.isArray(data.themes) ||
+                 (Array.isArray(data) && data.length > 0 && data.every(t => t && typeof t === 'object' && typeof t.name === 'string')))) {
         const r = importBrandThemes(data);
         flashToast(`✓ Themes imported (${r.added} added, ${r.updated} updated)`);
       } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
@@ -2313,15 +2308,6 @@ sidebarResizer.addEventListener('mousedown', e => {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 (async () => {
   await load();
-  // built-in starter themes (re-added if missing; correct them by re-importing a repo file by name)
-  let seededThemes = false;
-  BUILT_IN_THEMES.forEach(bt => {
-    if (!state.brandThemes.some(t => t.name.trim().toLowerCase() === bt.name.toLowerCase())) {
-      state.brandThemes.push({ id: uid(), name: bt.name, colors: { ...bt.colors } });
-      seededThemes = true;
-    }
-  });
-  if (seededThemes) save();
   if (state.categories.length === 0) {
     const cat = newCategory('Cash loan');
     const persona = newPersona('Anna');
