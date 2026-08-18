@@ -122,7 +122,8 @@
 
   .sb-list { list-style: none; overflow-y: auto; flex-shrink: 0; }
   #category-list { border-bottom: 1px solid var(--border-soft); max-height: 32%; }
-  #persona-list   { border-bottom: 1px solid var(--border-soft); max-height: 26%; }
+  #persona-list   { border-bottom: 1px solid var(--border-soft); max-height: 22%; }
+  #theme-list     { border-bottom: 1px solid var(--border-soft); max-height: 18%; }
   #journey-list   { flex: 1; overflow-y: auto; }
 
   .sb-item { display: flex; align-items: flex-start; padding: 5px 10px; font-size: 12px; color: var(--text-3); cursor: pointer; gap: 10px; }
@@ -197,11 +198,14 @@
   }
   .g-stage .drag-handle { color: var(--text-4); cursor: grab; font-size: 12px; user-select: none; }
   .g-stage:hover .drag-handle { color: var(--text-3); }
-  .g-stage .stage-name { font-size: 12px; font-weight: 600; color: var(--text-2); flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; }
+  .g-stage .stage-name { font-size: 12px; font-weight: 600; color: var(--cj-stage-text, var(--text-2)); flex: 1; cursor: text; padding: 1px 3px; border-radius: 3px; }
   .g-stage .stage-name:hover { background: var(--panel-2); }
   .g-stage input.rename-input { flex: 1; background: var(--inset); border: 1px solid var(--accent); border-radius: 3px; color: var(--text); font-size: 12px; padding: 1px 4px; outline: none; }
   .g-stage .stage-add-step { cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 3px; color: var(--text-4); }
   .g-stage .stage-add-step:hover { color: var(--accent-soft-text); background: var(--accent-soft); }
+  .g-stage .stage-remove { opacity: 0; cursor: pointer; font-size: 12px; padding: 0 3px; border-radius: 3px; color: var(--text-4); }
+  .g-stage:hover .stage-remove { opacity: 1; }
+  .g-stage .stage-remove:hover { color: var(--danger); background: var(--danger-soft); }
   .g-stage.dragging { opacity: 0.4; }
   .g-stage.drop-before { box-shadow: inset 3px 0 0 var(--accent); }
   .g-stage.drop-after  { box-shadow: inset -3px 0 0 var(--accent); }
@@ -356,6 +360,15 @@
     <ul id="persona-list" class="sb-list"></ul>
 
     <div class="sidebar-section-header">
+      Themes
+      <span style="display:flex; gap:2px; align-items:center;">
+        <button class="btn-add" id="btn-import-themes" aria-label="Import themes from JSON" title="Import themes from JSON">↥</button>
+        <button class="btn-add" id="btn-export-themes" aria-label="Export themes as JSON" title="Export themes as JSON (for the business repo)">↧</button>
+      </span>
+    </div>
+    <ul id="theme-list" class="sb-list"></ul>
+
+    <div class="sidebar-section-header">
       Customer journeys
       <button class="btn-add" id="btn-add-journey" aria-label="New journey" title="New journey">+</button>
     </div>
@@ -402,10 +415,27 @@ const EMOTION_KEY = 'emotion';
 const SCREENSHOT_KEY = 'screenshots';
 const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1..5 low→high
 
+// Brand theme color roles (each optional — falls back to the app token).
+// stageText has no direct token: it maps to the dedicated --cj-stage-text var.
+const THEME_ROLES = ['bg', 'stageBg', 'stageText', 'stepBg', 'labelBg', 'labelText', 'cellBg', 'text', 'border', 'borderSoft', 'accent'];
+const ROLE_FALLBACK_TOKEN = {
+  bg: '--bg', stageBg: '--panel-3', stepBg: '--panel', labelBg: '--panel-2', cellBg: '--cell',
+  labelText: '--text-3', text: '--text-2', border: '--border', borderSoft: '--border-soft', accent: '--accent',
+};
+const BRAND_THEME_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const BUILT_IN_THEMES = [
+  { name: 'Bank Millennium', colors: {
+    bg: '#ffffff', stageBg: '#c60052', stageText: '#ffffff', stepBg: '#ffffff',
+    labelBg: '#fbe8f0', labelText: '#a33164', cellBg: '#ffffff', text: '#24292e',
+    border: '#e8cbd8', borderSoft: '#f4e6ed', accent: '#c60052',
+  } },
+];
+
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
   categories: [],
   personas: [],
+  brandThemes: [],
   activeCategory: 0,
   activeJourney: 0,
   sidebarWidth: 220,
@@ -423,7 +453,7 @@ function freshCells() {
 function newStep(name) { return { id: uid(), name, cells: freshCells() }; }
 function newStage(name) { return { id: uid(), name, steps: [newStep('Step 1')] }; }
 function newJourney(title, personaId) {
-  return { id: uid(), personaId: personaId ?? null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
+  return { id: uid(), personaId: personaId ?? null, brandThemeId: null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
 }
 function newCategory(name) { return { id: uid(), name, journeys: [] }; }
 function newPersona(name) {
@@ -509,6 +539,72 @@ function toggleTheme() {
   save(); applyTheme();
 }
 
+// ─── Brand themes (per-journey export palettes) ──────────────────────────────
+function normalizeBrandThemeColors(colors) {
+  const out = {};
+  if (colors && typeof colors === 'object') {
+    THEME_ROLES.forEach(r => {
+      const v = colors[r];
+      if (typeof v === 'string' && BRAND_THEME_HEX.test(v.trim())) out[r] = v.trim();
+    });
+  }
+  return out;
+}
+function normalizeBrandTheme(t) {
+  if (!t || typeof t !== 'object' || typeof t.name !== 'string' || !t.name.trim()) return null;
+  return { id: t.id, name: t.name.trim(), colors: normalizeBrandThemeColors(t.colors) };
+}
+function currentBrandTheme() {
+  const j = currentJourney(); if (!j || j.brandThemeId == null) return null;
+  return state.brandThemes.find(t => t.id === j.brandThemeId) ?? null;
+}
+function applyBrandThemeToGrid() {
+  const scroller = document.getElementById('grid-scroll'); if (!scroller) return;
+  const t = currentBrandTheme();
+  THEME_ROLES.forEach(role => {
+    const prop = role === 'stageText' ? '--cj-stage-text' : ROLE_FALLBACK_TOKEN[role];
+    if (t && t.colors[role]) scroller.style.setProperty(prop, t.colors[role]);
+    else scroller.style.removeProperty(prop);
+  });
+}
+function setJourneyBrandTheme(themeId) {
+  const j = currentJourney(); if (!j) return;
+  j.brandThemeId = themeId ?? null;
+  save(); renderJourneyMeta(); renderThemeList(); renderGrid();
+}
+function removeBrandTheme(i) {
+  const t = state.brandThemes[i]; if (!t) return;
+  state.brandThemes.splice(i, 1);
+  state.categories.forEach(cat => (cat.journeys || []).forEach(j => { if (j.brandThemeId === t.id) j.brandThemeId = null; }));
+  save(); render();
+}
+function importBrandThemes(data) {
+  const list = Array.isArray(data.themes) ? data.themes : [];
+  let added = 0, updated = 0;
+  const seen = new Set();
+  list.forEach(src => {
+    if (!src || typeof src !== 'object' || typeof src.name !== 'string' || !src.name.trim()) return;
+    const name = src.name.trim();
+    const key = name.toLowerCase();
+    if (seen.has(key)) return; // duplicate names in one file — first wins
+    seen.add(key);
+    const colors = normalizeBrandThemeColors(src.colors);
+    let t = state.brandThemes.find(x => x.name.trim().toLowerCase() === key);
+    if (!t) { t = { id: uid(), name, colors: {} }; state.brandThemes.push(t); added++; }
+    else updated++;
+    // per-key merge: only the keys present in the file overwrite
+    Object.keys(colors).forEach(k => { t.colors[k] = colors[k]; });
+  });
+  save(); render();
+  return { added, updated };
+}
+function exportBrandThemes() {
+  const data = { version: 1, kind: 'themes', app: 'customer-journey',
+    themes: state.brandThemes.map(t => ({ name: t.name, colors: { ...t.colors } })) };
+  downloadJson(data, 'customer-journey-themes.json');
+  flashToast('✓ Themes exported');
+}
+
 // ─── Persistence ──────────────────────────────────────────────────────────────
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -523,12 +619,17 @@ function load() {
     Object.assign(state, parsed);
     if (!state.theme) state.theme = 'light';
     // normalize any missing cells/slices on loaded data
-    state.categories.forEach(cat => cat.journeys.forEach(j => j.stages.forEach(st => st.steps.forEach(step => {
-      const c = step.cells || (step.cells = {});
-      SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
-    }))));
+    state.categories.forEach(cat => cat.journeys.forEach(j => {
+      if (j.brandThemeId == null) j.brandThemeId = null;
+      j.stages.forEach(st => st.steps.forEach(step => {
+        const c = step.cells || (step.cells = {});
+        SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
+      }));
+    }));
     if (!Array.isArray(state.personas)) state.personas = [];
     state.personas.forEach(p => normalizePersona(p));
+    if (!Array.isArray(state.brandThemes)) state.brandThemes = [];
+    state.brandThemes = state.brandThemes.map(t => normalizeBrandTheme(t)).filter(Boolean);
   } catch (e) { /* corrupt — keep defaults */ }
 }
 
@@ -1086,6 +1187,7 @@ function openPersonaCard(personaId) {
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const categoryList  = document.getElementById('category-list');
 const personaList   = document.getElementById('persona-list');
+const themeList     = document.getElementById('theme-list');
 const journeyList   = document.getElementById('journey-list');
 const journeyMeta   = document.getElementById('journey-meta');
 const panelTitle    = document.getElementById('panel-title');
@@ -1143,6 +1245,7 @@ let _pendingElementEdit = null;
 function render() {
   renderCategoryList();
   renderPersonaList();
+  renderThemeList();
   renderJourneyList();
   renderMain();
 }
@@ -1187,6 +1290,26 @@ function renderPersonaList() {
     personaList.appendChild(li);
   });
   if (state.personas.length === 0) personaList.innerHTML = '<li class="sb-empty">No personas — add one (+) or import (↥).</li>';
+}
+
+// ─── Sidebar: brand themes ────────────────────────────────────────────────────
+function renderThemeList() {
+  themeList.innerHTML = '';
+  const j = currentJourney();
+  state.brandThemes.forEach((t, i) => {
+    const li = mkSidebarItem({
+      name: t.name,
+      active: !!(j && j.brandThemeId === t.id),
+      onActivate: () => {
+        const cj = currentJourney();
+        if (!cj) { flashToast('Open a journey first'); return; }
+        setJourneyBrandTheme(cj.brandThemeId === t.id ? null : t.id); // click again = back to app theme
+      },
+      onRemove: () => removeBrandTheme(i),
+    });
+    themeList.appendChild(li);
+  });
+  if (state.brandThemes.length === 0) themeList.innerHTML = '<li class="sb-empty">No themes yet — import (↥) a themes JSON file.</li>';
 }
 
 // ─── Sidebar: journeys ────────────────────────────────────────────────────────
@@ -1239,7 +1362,7 @@ function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRenam
   const nameSpan = document.createElement('span');
   nameSpan.className = 'item-name';
   nameSpan.textContent = name;
-  nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+  if (onRename) nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
   main.appendChild(nameSpan);
   const subs = Array.isArray(sub) ? sub : (sub ? [sub] : []);
   subs.forEach(s => {
@@ -1249,13 +1372,16 @@ function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRenam
     main.appendChild(subSpan);
   });
 
-  const editBtn = document.createElement('button');
-  editBtn.type = 'button';
-  editBtn.className = 'item-edit';
-  editBtn.textContent = '✎';
-  editBtn.setAttribute('aria-label', 'Rename');
-  editBtn.title = 'Rename';
-  editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+  let editBtn = null;
+  if (onRename) {
+    editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'item-edit';
+    editBtn.textContent = '✎';
+    editBtn.setAttribute('aria-label', 'Rename');
+    editBtn.title = 'Rename';
+    editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+  }
 
   const removeBtn = document.createElement('button');
   removeBtn.type = 'button';
@@ -1265,39 +1391,41 @@ function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRenam
   removeBtn.title = 'Remove';
   removeBtn.addEventListener('click', e => { e.stopPropagation(); onRemove(); });
 
-  // drag reorder
-  li.addEventListener('dragstart', e => {
-    sidebarDrag = { kind: dragKind, from: Array.from(li.parentElement.children).indexOf(li) };
-    li.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', '');
-  });
-  li.addEventListener('dragend', () => {
-    sidebarDrag = null;
-    li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('dragging', 'drag-over-above', 'drag-over-below'));
-  });
-  li.addEventListener('dragover', e => {
-    if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
-    e.preventDefault();
-    const rect = li.getBoundingClientRect();
-    const mid = rect.top + rect.height / 2;
-    li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('drag-over-above', 'drag-over-below'));
-    li.classList.add(e.clientY < mid ? 'drag-over-above' : 'drag-over-below');
-  });
-  li.addEventListener('drop', e => {
-    if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
-    e.preventDefault(); e.stopPropagation();
-    const rect = li.getBoundingClientRect();
-    const mid = rect.top + rect.height / 2;
-    let to = Array.from(li.parentElement.children).indexOf(li);
-    if (e.clientY >= mid) to++;
-    if (sidebarDrag.from < to) to--;
-    onMove(sidebarDrag.from, to);
-  });
+  // drag reorder (draggable lists only)
+  if (draggable) {
+    li.addEventListener('dragstart', e => {
+      sidebarDrag = { kind: dragKind, from: Array.from(li.parentElement.children).indexOf(li) };
+      li.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    li.addEventListener('dragend', () => {
+      sidebarDrag = null;
+      li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('dragging', 'drag-over-above', 'drag-over-below'));
+    });
+    li.addEventListener('dragover', e => {
+      if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
+      e.preventDefault();
+      const rect = li.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      li.parentElement.querySelectorAll('.sb-item').forEach(el => el.classList.remove('drag-over-above', 'drag-over-below'));
+      li.classList.add(e.clientY < mid ? 'drag-over-above' : 'drag-over-below');
+    });
+    li.addEventListener('drop', e => {
+      if (!sidebarDrag || sidebarDrag.kind !== dragKind) return;
+      e.preventDefault(); e.stopPropagation();
+      const rect = li.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      let to = Array.from(li.parentElement.children).indexOf(li);
+      if (e.clientY >= mid) to++;
+      if (sidebarDrag.from < to) to--;
+      onMove(sidebarDrag.from, to);
+    });
+  }
 
-  li.appendChild(handle);
+  if (draggable) li.appendChild(handle);
   li.appendChild(main);
-  li.appendChild(editBtn);
+  if (editBtn) li.appendChild(editBtn);
   li.appendChild(removeBtn);
   li.addEventListener('click', () => onActivate());
   return li;
@@ -1316,6 +1444,7 @@ function applyPendingRename(kind, listEl, activeIdx, renameFn) {
 function renderMain() {
   const j = currentJourney();
   if (!j) {
+    applyBrandThemeToGrid(); // clear any brand overrides when no journey is open
     journeyMeta.style.display = 'none';
     gridEl.style.display = 'none';
     gridEmpty.style.display = '';
@@ -1377,6 +1506,19 @@ function renderJourneyMeta() {
   personaWrap.appendChild(plab); personaWrap.appendChild(pRow);
   row1.appendChild(personaWrap);
 
+  const themeWrap = document.createElement('div');
+  themeWrap.style.display = 'flex'; themeWrap.style.flexDirection = 'column'; themeWrap.style.gap = '2px';
+  const tlab = document.createElement('span'); tlab.className = 'field-label'; tlab.textContent = 'Theme';
+  const tsel = document.createElement('select');
+  tsel.setAttribute('aria-label', 'Theme');
+  const noThemeOpt = document.createElement('option'); noThemeOpt.value = ''; noThemeOpt.textContent = '— app theme —'; tsel.appendChild(noThemeOpt);
+  state.brandThemes.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; tsel.appendChild(o); });
+  const themeValid = j.brandThemeId != null && state.brandThemes.some(t => t.id === j.brandThemeId);
+  tsel.value = themeValid ? String(j.brandThemeId) : '';
+  tsel.addEventListener('change', () => setJourneyBrandTheme(tsel.value ? Number(tsel.value) : null));
+  themeWrap.appendChild(tlab); themeWrap.appendChild(tsel);
+  row1.appendChild(themeWrap);
+
   journeyMeta.appendChild(row1);
 
   const row2 = document.createElement('div');
@@ -1423,6 +1565,7 @@ function rowWrap() {
 }
 
 function renderGrid() {
+  applyBrandThemeToGrid();
   const j = currentJourney();
   gridEl.innerHTML = '';
   if (!j) return;
@@ -1465,6 +1608,9 @@ function renderGrid() {
     const addStepBtn = document.createElement('button'); addStepBtn.className = 'stage-add-step'; addStepBtn.type = 'button';
     addStepBtn.textContent = '+ step'; addStepBtn.setAttribute('aria-label', `Add step to ${st.name}`); addStepBtn.title = 'Add step to stage';
     addStepBtn.addEventListener('click', e => { e.stopPropagation(); addStep(st.id); });
+    const removeStageBtn = document.createElement('button'); removeStageBtn.type = 'button'; removeStageBtn.className = 'stage-remove';
+    removeStageBtn.textContent = '×'; removeStageBtn.setAttribute('aria-label', `Remove stage ${st.name}`); removeStageBtn.title = 'Remove stage';
+    removeStageBtn.addEventListener('click', e => { e.stopPropagation(); removeStage(st.id); });
 
     cell.draggable = true;
     cell.addEventListener('dragstart', e => { gridDrag = { kind: 'stage', from: si }; cell.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); });
@@ -1485,7 +1631,7 @@ function renderGrid() {
       moveStage(gridDrag.from, to);
     });
 
-    cell.appendChild(handle); cell.appendChild(nameSpan); cell.appendChild(addStepBtn);
+    cell.appendChild(handle); cell.appendChild(nameSpan); cell.appendChild(addStepBtn); cell.appendChild(removeStageBtn);
     r1.appendChild(cell);
   });
   gridEl.appendChild(r1);
@@ -1673,6 +1819,26 @@ function cssVar(name, fallback) {
   return v || fallback;
 }
 
+// export palette: the journey's brand theme wins, missing roles fall back to app tokens
+function exportPalette() {
+  const t = currentBrandTheme();
+  const c = (t && t.colors) || {};
+  const pick = (role, token, fb) => c[role] || cssVar(token, fb);
+  return {
+    bg:         pick('bg',         '--bg',          '#ffffff'),
+    stageBg:    pick('stageBg',    '--panel-3',     '#eaecef'),
+    stageText:  pick('stageText',  '--text-2',      '#4b5563'),
+    panel:      pick('stepBg',     '--panel',       '#ffffff'),
+    panel2:     pick('labelBg',    '--panel-2',     '#f1f3f5'),
+    labelText:  pick('labelText',  '--text-3',      '#5c6670'),
+    cell:       pick('cellBg',     '--cell',        '#ffffff'),
+    text:       pick('text',       '--text-2',      '#4b5563'),
+    border:     pick('border',     '--border',      '#d0d7de'),
+    borderSoft: pick('borderSoft', '--border-soft', '#e5e7eb'),
+    accent:     pick('accent',     '--accent',      '#2563eb'),
+  };
+}
+
 // layout plan for a row of screenshot thumbnails inside a column (no bitmaps needed — uses metadata)
 function shotDrawPlan(shots, availW, maxH) {
   const n = shots.length;
@@ -1705,12 +1871,7 @@ async function exportPng() {
     } catch (e) { /* placeholder */ }
   }))));
 
-  const C = {
-    bg: cssVar('--bg', '#fff'), panel: cssVar('--panel', '#fff'), panel2: cssVar('--panel-2', '#f1f3f5'),
-    border: cssVar('--border', '#d0d7de'), borderSoft: cssVar('--border-soft', '#e5e7eb'),
-    text: cssVar('--text', '#1f2328'), text2: cssVar('--text-2', '#57606a'), text3: cssVar('--text-3', '#6e7781'),
-    cell: cssVar('--cell', '#fff'),
-  };
+  const C = exportPalette();
   const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 140, colW = 200, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -1761,7 +1922,7 @@ async function exportPng() {
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, totalW, totalH);
 
   const x0 = pad, y0 = pad;
-  ctx.fillStyle = C.text; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
+  ctx.fillStyle = C.accent; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
   ctx.fillText(`${j.title}  ·  ${personaName(j.personaId)}`, x0, y0 + 16);
   ctx.font = font;
 
@@ -1771,8 +1932,8 @@ async function exportPng() {
     const lasts = []; for (let i = 0; i < flat.length; i++) if (flat[i].stage === st) lasts.push(i);
     const last = lasts[lasts.length - 1];
     const x1 = x0 + labelW + first * colW;
-    ctx.fillStyle = C.panel2; ctx.fillRect(x1, y, (last - first + 1) * colW, 22);
-    ctx.fillStyle = C.text2; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
+    ctx.fillStyle = C.stageBg; ctx.fillRect(x1, y, (last - first + 1) * colW, 22);
+    ctx.fillStyle = C.stageText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
     ctx.fillText(st.name, x1 + 8, y + 15);
     ctx.font = font;
   });
@@ -1782,18 +1943,18 @@ async function exportPng() {
     const x1 = x0 + labelW + col * colW;
     ctx.fillStyle = C.panel; ctx.fillRect(x1, y, colW, stepHeaderH);
     ctx.strokeStyle = C.border; ctx.strokeRect(x1, y, colW, stepHeaderH);
-    ctx.fillStyle = C.text2;
+    ctx.fillStyle = C.text;
     ctx.fillText(trunc(ctx, f.step.name, colW - 12), x1 + 7, y + 20);
   });
   ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, stepHeaderH);
   ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, stepHeaderH);
-  ctx.fillStyle = C.text3; ctx.fillText('Step', x0 + 8, y + 20);
+  ctx.fillStyle = C.labelText; ctx.fillText('Step', x0 + 8, y + 20);
   y += stepHeaderH;
 
   sliceRows.forEach(({ slice, h }) => {
     ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, h);
     ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, h);
-    ctx.fillStyle = C.text3; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
+    ctx.fillStyle = C.labelText; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
     ctx.fillText(slice.label, x0 + 8, y + 17);
     ctx.font = font;
     flat.forEach((f, col) => {
@@ -1805,10 +1966,10 @@ async function exportPng() {
         if (v != null) {
           ctx.fillStyle = EMO_COLORS[v - 1];
           for (let k = 0; k < v; k++) { ctx.beginPath(); ctx.arc(x1 + 12 + k * 16, y + h / 2, 5, 0, Math.PI * 2); ctx.fill(); }
-        } else { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
+        } else { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
       } else if (slice.key === SCREENSHOT_KEY) {
         const shots = (f.step.cells || {})[SCREENSHOT_KEY] || [];
-        if (shots.length === 0) { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + 17); }
+        if (shots.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
         else {
           const plan = shotDrawPlan(shots, colW - 16, 72);
           let sx = x1 + 8;
@@ -1834,11 +1995,11 @@ async function exportPng() {
         let ty = y + 16;
         list.forEach(el => {
           const lines = wrapLines(el.text, colW - 18) || [''];
-          ctx.fillStyle = C.text2;
+          ctx.fillStyle = C.text;
           lines.forEach(ln => { ctx.fillText(ln, x1 + 8, ty); ty += lineH; });
           ty += 2;
         });
-        if (list.length === 0) { ctx.fillStyle = C.text3; ctx.fillText('—', x1 + 8, y + 17); }
+        if (list.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
       }
     });
     y += h;
@@ -1900,6 +2061,7 @@ async function exportDatabase() {
   const data = { version: 1, kind: 'database', app: 'customer-journey',
     categories: JSON.parse(JSON.stringify(state.categories)),
     personas: JSON.parse(JSON.stringify(state.personas)),
+    brandThemes: JSON.parse(JSON.stringify(state.brandThemes)),
     images };
   downloadJson(data, 'customer-journey-backup-' + dateStamp() + '.json');
   flashToast('✓ Database exported');
@@ -1912,8 +2074,13 @@ async function exportJourney() {
     const p = state.personas.find(x => x.id === j.personaId);
     if (p) persona = normalizePersona(JSON.parse(JSON.stringify(p)));
   }
+  let theme = null;
+  if (j.brandThemeId != null) {
+    const t = state.brandThemes.find(x => x.id === j.brandThemeId);
+    if (t) theme = { name: t.name };
+  }
   const data = { version: 1, kind: 'journey', app: 'customer-journey',
-    journey: JSON.parse(JSON.stringify(j)), persona, images };
+    journey: JSON.parse(JSON.stringify(j)), persona, theme, images };
   downloadJson(data, safeFilename(j.title) + '.json');
   flashToast('✓ Journey exported');
 }
@@ -1928,6 +2095,7 @@ function normalizeJourney(j) {
   if (!j.title) j.title = 'Imported journey';
   if (j.description == null) j.description = '';
   if (j.expectations == null) j.expectations = '';
+  if (j.brandThemeId == null) j.brandThemeId = null;
   if (!Array.isArray(j.stages)) j.stages = [];
   j.stages.forEach((st, si) => {
     if (!st.name) st.name = `Stage ${si + 1}`;
@@ -1993,6 +2161,12 @@ async function importDatabase(data) {
   personas.forEach(p => normalizePersona(p));
   const personaMap = {};
   personas.forEach(p => { const old = p.id; p.id = uid(); personaMap[old] = p.id; });
+  // themes: regen ids + remap journey refs; a backup without brandThemes keeps the current set
+  const themes = Array.isArray(data.brandThemes)
+    ? data.brandThemes.map(t => normalizeBrandTheme({ ...t })).filter(Boolean)
+    : state.brandThemes;
+  const themeMap = {};
+  themes.forEach(t => { const old = t.id; t.id = uid(); themeMap[old] = t.id; });
   const categories = Array.isArray(data.categories) ? data.categories : [];
   const steps = [];
   categories.forEach(cat => {
@@ -2001,11 +2175,13 @@ async function importDatabase(data) {
       normalizeJourney(j); regenJourney(j);
       stepsOfJourney(j, steps);
       j.personaId = (j.personaId != null && personaMap[j.personaId] != null) ? personaMap[j.personaId] : null;
+      j.brandThemeId = (j.brandThemeId != null && themeMap[j.brandThemeId] != null) ? themeMap[j.brandThemeId] : null;
     });
   });
   await importImagesIntoDb(data, steps);
   state.categories = categories;
   state.personas = personas;
+  state.brandThemes = themes;
   state.activeCategory = 0; state.activeJourney = 0;
   _activeShotsCell = null;
   ensureActiveIndicesValid();
@@ -2028,9 +2204,15 @@ async function importJourney(data) {
     if (sp.frustrations.length && !p.frustrations.length) p.frustrations = sp.frustrations;
     personaId = p.id;
   } else if (state.personas[0]) personaId = state.personas[0].id;
+  let brandThemeId = null;
+  if (data.theme && data.theme.name) {
+    const t = state.brandThemes.find(x => x.name.trim().toLowerCase() === String(data.theme.name).trim().toLowerCase());
+    if (t) brandThemeId = t.id;
+  }
   const j = data.journey || data;
   normalizeJourney(j); regenJourney(j);
   j.personaId = personaId;
+  j.brandThemeId = brandThemeId;
   await importImagesIntoDb(data, stepsOfJourney(j, []));
   cat.journeys.push(j);
   state.activeJourney = cat.journeys.length - 1;
@@ -2051,6 +2233,9 @@ function importFromFile(file) {
       } else if (data && data.kind === 'personas' && Array.isArray(data.personas)) {
         const r = importPersonas(data);
         flashToast(`✓ Personas imported (${r.added} added, ${r.updated} updated)`);
+      } else if (data && data.kind === 'themes' && Array.isArray(data.themes)) {
+        const r = importBrandThemes(data);
+        flashToast(`✓ Themes imported (${r.added} added, ${r.updated} updated)`);
       } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
         await importJourney(data);
         flashToast('✓ Journey imported');
@@ -2094,6 +2279,8 @@ btnExportJson.addEventListener('click', exportDatabase);
 btnImport.addEventListener('click', () => importInput.click());
 importInput.addEventListener('change', () => { importFromFile(importInput.files[0]); importInput.value = ''; });
 document.getElementById('btn-import-personas').addEventListener('click', () => importInput.click());
+document.getElementById('btn-import-themes').addEventListener('click', () => importInput.click());
+document.getElementById('btn-export-themes').addEventListener('click', exportBrandThemes);
 const shotInput = document.getElementById('shot-file');
 shotInput.addEventListener('change', () => {
   if (_shotPickTarget != null) addScreenshotsFromFiles(_shotPickTarget, shotInput.files);
@@ -2126,6 +2313,15 @@ sidebarResizer.addEventListener('mousedown', e => {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 (async () => {
   await load();
+  // built-in starter themes (re-added if missing; correct them by re-importing a repo file by name)
+  let seededThemes = false;
+  BUILT_IN_THEMES.forEach(bt => {
+    if (!state.brandThemes.some(t => t.name.trim().toLowerCase() === bt.name.toLowerCase())) {
+      state.brandThemes.push({ id: uid(), name: bt.name, colors: { ...bt.colors } });
+      seededThemes = true;
+    }
+  });
+  if (seededThemes) save();
   if (state.categories.length === 0) {
     const cat = newCategory('Cash loan');
     const persona = newPersona('Anna');
