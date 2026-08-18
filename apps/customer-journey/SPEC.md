@@ -455,3 +455,37 @@ Import tolerance: `name` required (trim); `colors` optional object; per-key valu
 10. **Boot seed** — in the boot IIFE after `load()`: if no theme named "Bank Millennium" (case-insensitive) → push the built-in object from the contract example above. Re-checked every boot, so it survives imports/wipes; overwriting it via repo import works by name.
 11. **CSS** — `.g-stage .stage-remove` (hover-reveal ×); the `--cj-stage-text` rule; `#theme-list` sizing. Tokens only, both app themes AA as today (brand themes are the author's contrast responsibility — noted as Later).
 12. **Regression** — app `theme` (light/dark/auto) untouched and still wins when a journey has no brand theme; all existing flows (grid, drag & drop, emotion, screenshots, PNG, JSON export/import, sidebar) unchanged; `mkSidebarItem` extension is additive.
+
+### Change 9 — bug: forced Millennium seed + strict themes import blocks manual JSON workflow (2026-08-18)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟡 medium — no data loss, but the themes feature's core workflow (clean JSON in the business repo) is impossible: every export is pre-polluted, local deletion doesn't stick, and hand-written JSON is rejected on format.
+
+**Reproduction**
+1. Open the tool → the Themes panel already lists "Bank Millennium" (user never authored it).
+2. Hover × on it to delete → gone. Refresh the page → it's back.
+3. Click ↧ (export themes) → the downloaded `customer-journey-themes.json` always contains Bank Millennium → committing it to `marekbrze/business` puts the theme in the repo, which the user explicitly does not want yet.
+4. Author a themes JSON by hand without the exact `{"kind": "themes", ...}` wrapper (e.g. a bare `[{"name": "...", "colors": {...}}]` or `{"themes": [...]}`) → ↥ import → "✗ Invalid file".
+**Expected**: themes start empty; the user adds them manually via JSON they author; the repo file starts clean; deleting a theme sticks. **Actual**: a built-in theme is force-injected, resurrects on every boot, rides along in every export, and hand-written JSON variants are rejected.
+**Reliability**: every time, all browsers (the seed runs on every boot).
+**Location**: `index.html:426` (`BUILT_IN_THEMES` constant), `index.html:2317-2324` (boot seed re-adding by name), `index.html:2236` (import detection requires `kind === 'themes'`), `index.html:601` (`exportBrandThemes` exports all of state — all-or-nothing).
+
+**Root cause**
+**Class**: spec-vs-code drift (a Change 8 design that contradicts the workflow Change 8 itself established)
+**Cause**: Change 8's build instruction #10 planned a permanent boot seed — `BUILT_IN_THEMES.forEach(...)` re-adds "Bank Millennium" on **every** boot whenever a theme with that name is absent (`index.html:2317-2324`). Since `exportBrandThemes()` (`index.html:601`) exports the entire `state.brandThemes` list with no selection, the seeded theme is unavoidable in the repo file, and deleting it locally is impossible (resurrect on refresh). This contradicts the source-of-truth pattern the same Change established for personas: the business repo authors content, the tool imports it — the tool must not inject its own entries into the library or its exports. Compounding it, the import branch (`index.html:2236`) demands the exact `kind: 'themes'` wrapper (stricter than the database branch, which also accepts `Array.isArray(data.categories)`), so a hand-authored file in any friendlier shape is rejected — which is why the user concluded manual adding "is not implemented".
+**Evidence**: `index.html:2317-2324` seed loop; `index.html:601-606` export-all; `index.html:2236` strict detection (compare `index.html:2232`: `data.kind === 'database' || Array.isArray(data.categories)`). Spec (intent): SPEC.md Change 8 — "Seeds a built-in Bank Millennium theme" (now superseded by this Change; the user confirmed: remove the built-in completely, the palette stays as a documented reference snippet to be authored into the repo JSON when ready).
+
+**Fix plan**
+- **Change**:
+  1. Delete `BUILT_IN_THEMES` (`index.html:426-433`) and the boot seed block (`index.html:2317-2324`). Themes start empty; no theme is ever auto-injected. The Millennium palette remains documented in Change 8's contract example — the canonical snippet the user copies into the repo file when they want it.
+  2. Loosen the themes detection at `index.html:2236` to mirror the database branch tolerance: `data.kind === 'themes' || Array.isArray(data.themes) || (Array.isArray(data) && data.length > 0 && data.every(t => t && typeof t === 'object' && typeof t.name === 'string'))` — accepts the full contract, `{themes: [...]}` without `kind`, and a bare array of theme objects. Position in the chain unchanged (after personas, before journey; a bare array matches no other branch's shape).
+  3. Empty-state copy at `index.html:1312`: "No themes yet — ↥ import a themes JSON file (a bare list of {name, colors} works too)."
+  4. Migration: do **not** force-delete a "Bank Millennium" already present in existing localStorage state — the user removes it once via hover × (after this fix the deletion sticks). One-time manual step, noted here.
+- **Spec impact**: Change 8's Impact bullet ("Seeds a built-in…") and build instruction #10 are superseded by this Change — ux-build follows Change 9.
+
+**Regression scope**
+- Boot IIFE (`index.html:2315+`): only the seed block references `BUILT_IN_THEMES` (grep: lines 426, 2317-2324) — remove both, nothing else to update.
+- `exportBrandThemes()` (`index.html:601`): unchanged — with the seed gone, export = exactly what the user authored; no filtering needed.
+- Import chain (`index.html:2232-2243`): the widened themes branch must not swallow other kinds — database requires `.categories`, personas requires `.kind === 'personas'`, journey requires `.journey`/`.stages`; a bare array satisfies none of them. Edge: a bare `[]` is rejected by the `data.length > 0` guard → "✗ Invalid file" (correct — an empty file adds nothing and shouldn't look successful).
+- `importBrandThemes()` / merge-by-name semantics: untouched; re-importing a repo file that later contains a Millennium entry works by name — that is the intended future flow.
+- Journey-meta Theme select, database export/import of `brandThemes`, PNG/grid theming: untouched.
+- Related edge cases: none new — the leftover seeded theme in existing state (item 4 above) is the only migration concern.
