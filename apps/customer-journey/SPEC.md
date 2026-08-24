@@ -556,7 +556,7 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 **Status**: built — static verification passed (syntax; `mindset` only in the migration helper; call sites in `load()` + `normalizeStep`)
 
 ### Change 14 — feature: Follow-ups row (channel dictionary + message + action) + touchpoint JSON gaps fixed (2026-08-24)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (syntax; no stale refs; all factory/JSON call sites wired)
 
 **User goal**
 A **Follow-ups** row: each element = a **channel picked from a dictionary** (push, SMS, e-mail… — analogous to touchpoints, but a **separate dictionary**) + the **message text** + an **action** (free text, what the follow-up triggers). The row captures what the bank sends to the customer at a given step.

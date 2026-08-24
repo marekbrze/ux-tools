@@ -253,6 +253,12 @@
   .g-cell .element:hover .el-remove { opacity: 1; }
   .g-cell .element .el-remove:hover { color: var(--danger); }
   .g-cell .element.dragging { opacity: 0.35; }
+  /* Follow-up element row: channel chip + message text + action */
+  .g-cell .element.fu-row { flex-wrap: wrap; }
+  .fu-chip { flex-shrink: 0; font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 8px; background: var(--chip); color: var(--chip-text); letter-spacing: 0.02em; }
+  .fu-row .el-text { flex: 2; min-width: 60px; }
+  .fu-action { flex: 1; min-width: 70px; font-size: 11.5px; color: var(--text-3); line-height: 1.35; cursor: text; word-break: break-word; white-space: pre-wrap; }
+  .fu-action:empty::before { content: '→ action…'; color: var(--text-4); }
   .g-cell .add-element { align-self: flex-start; border: 1px dashed var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 7px; color: var(--text-4); }
   .g-cell .add-element:hover { border-color: var(--accent); color: var(--accent-soft-text); }
 
@@ -454,6 +460,7 @@ const STEP_COL_W  = 300;
 const SLICES = [
   { key: 'action',      label: 'Actions' },
   { key: 'touchpoint',  label: 'Touchpoints' },
+  { key: 'follow-up',   label: 'Follow-ups' },
   { key: 'insight',     label: 'Insights' },
   { key: 'emotion',     label: 'Emotions' },
   { key: 'pain-point',  label: 'Pain points' },
@@ -466,6 +473,7 @@ const SLICES = [
 const EMOTION_KEY = 'emotion';
 const SCREENSHOT_KEY = 'screenshots';
 const TOUCHPOINT_KEY = 'touchpoint';
+const FOLLOWUP_KEY = 'follow-up';
 const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1..5 low→high
 
 // Brand theme color roles (each optional — falls back to the app token).
@@ -511,7 +519,7 @@ function newStage(name) { return { id: uid(), name, steps: [newStep('Step 1')] }
 function newJourney(title, personaId) {
   return { id: uid(), personaId: personaId ?? null, brandThemeId: null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
 }
-function newCategory(name) { return { id: uid(), name, journeys: [], touchpoints: [] }; }
+function newCategory(name) { return { id: uid(), name, journeys: [], touchpoints: [], followups: [] }; }
 function newTouchpointItem(name) { return { id: uid(), name }; }
 function newPersona(name) {
   return { id: uid(), name, role: '', description: '', goals: [], needs: [], frustrations: [], quote: '' };
@@ -538,8 +546,17 @@ function currentJourney() { return currentCategory()?.journeys[state.activeJourn
 function personaName(id) { return state.personas.find(p => p.id === id)?.name ?? '—'; }
 function currentTouchpoints() { return currentCategory()?.touchpoints ?? []; }
 function tpName(id) { return currentTouchpoints().find(t => t.id === id)?.name ?? null; }
+function currentFollowups() { return currentCategory()?.followups ?? []; }
+function fuName(id) { return currentFollowups().find(t => t.id === id)?.name ?? null; }
 function elementText(el, key) {
   if (key === TOUCHPOINT_KEY && el.tpId != null) return tpName(el.tpId) ?? (el.text || '');
+  if (key === FOLLOWUP_KEY) {
+    const parts = [];
+    const ch = fuName(el.fuId); if (ch) parts.push(ch);
+    if (el.text) parts.push(el.text);
+    if (el.action) parts.push('→ ' + el.action);
+    return parts.join(' · ') || '…';
+  }
   return el.text;
 }
 function tpFindOrCreate(cat, name) {
@@ -700,6 +717,8 @@ function load() {
     }));
     // touchpoint library migration: free-text elements become per-category library items
     state.categories.forEach(cat => migrateCategoryTouchpoints(cat));
+    // follow-up channel library: ensure the array exists (new in Change 14 — no legacy to resolve)
+    state.categories.forEach(cat => normalizeCategoryFollowups(cat));
     if (!Array.isArray(state.personas)) state.personas = [];
     state.personas.forEach(p => normalizePersona(p));
     if (!Array.isArray(state.brandThemes)) state.brandThemes = [];
@@ -875,11 +894,11 @@ function addElement(stepId, slice) {
   _pendingElementEdit = { stepId, slice, elementId: el.id };
   save(); renderGrid();
 }
-function updateElement(stepId, slice, elementId, text) {
+function updateElement(stepId, slice, elementId, text, field = 'text') {
   const r = findStep(stepId); if (!r) return;
   const el = r.step.cells[slice]?.find(e => e.id === elementId);
   if (!el) return;
-  el.text = text;
+  el[field] = text;
   save();
 }
 function removeElement(stepId, slice, elementId) {
@@ -980,6 +999,125 @@ function removeTouchpointElement(stepId, tpId) {
   const idx = list.findIndex(e => e.tpId === tpId); if (idx < 0) return;
   list.splice(idx, 1);
   save(); refreshTpCell(stepId);
+}
+
+// ─── Follow-up channel library (per category — the touchpoint pattern) ───────
+// Element: { id, fuId, text (message), action (free text) } in cells['follow-up'].
+function normalizeCategoryFollowups(cat) {
+  if (!cat || typeof cat !== 'object') return;
+  if (!Array.isArray(cat.followups)) cat.followups = [];
+  cat.followups = cat.followups
+    .map(t => (typeof t === 'string') ? newTouchpointItem(t) : t)
+    .filter(t => t && typeof t === 'object' && typeof t.name === 'string' && t.name.trim())
+    .map(t => { if (t.id == null) t.id = uid(); t.name = t.name.trim(); return t; });
+}
+function fuFindOrCreate(cat, name) {
+  const nm = String(name ?? '').trim(); if (!nm) return null;
+  if (!Array.isArray(cat.followups)) cat.followups = [];
+  let t = cat.followups.find(x => x.name.trim().toLowerCase() === nm.toLowerCase());
+  if (!t) { t = newTouchpointItem(nm); cat.followups.push(t); }
+  return t;
+}
+function followupUsage(cat, fuId) {
+  let n = 0;
+  ((cat.journeys) || []).forEach(j => ((j.stages) || []).forEach(st => ((st.steps) || []).forEach(step => {
+    const list = (step.cells || {})[FOLLOWUP_KEY];
+    if (Array.isArray(list)) list.forEach(el => { if (el && el.fuId === fuId) n++; });
+  })));
+  return n;
+}
+function addFollowup(name) {
+  const cat = currentCategory(); if (!cat) return null;
+  return fuFindOrCreate(cat, name); // returns the existing item on a duplicate name
+}
+function renameFollowup(fuId, name) {
+  const cat = currentCategory(); if (!cat) return;
+  const nm = String(name ?? '').trim(); if (!nm) return;
+  const t = cat.followups.find(x => x.id === fuId); if (!t) return;
+  t.name = nm; // chips/composed displays resolve live via fuId — nothing to snapshot
+  save();
+}
+function removeFollowup(fuId) {
+  const cat = currentCategory(); if (!cat) return;
+  const t = cat.followups.find(x => x.id === fuId); if (!t) return;
+  const uses = followupUsage(cat, fuId);
+  if (uses > 0 && !confirm(`"${t.name}" is used in ${uses} ${plural(uses, 'cell', 'cells')}. Remove it from all journeys?`)) return;
+  cat.followups = cat.followups.filter(x => x.id !== fuId);
+  cat.journeys.forEach(j => j.stages.forEach(st => st.steps.forEach(step => {
+    const list = (step.cells || {})[FOLLOWUP_KEY];
+    if (Array.isArray(list)) step.cells[FOLLOWUP_KEY] = list.filter(el => el.fuId !== fuId);
+  })));
+  save();
+}
+function moveFollowup(from, to) {
+  const cat = currentCategory(); if (!cat) return;
+  if (from === to || from < 0 || from >= cat.followups.length || to < 0 || to >= cat.followups.length) return;
+  const [it] = cat.followups.splice(from, 1);
+  cat.followups.splice(to, 0, it);
+  save();
+}
+function addFollowupElement(stepId, fuId) {
+  const r = findStep(stepId); if (!r) return null;
+  const list = r.step.cells[FOLLOWUP_KEY]; if (!Array.isArray(list)) return null;
+  const el = { id: uid(), fuId, text: '', action: '' };
+  list.push(el);
+  save(); refreshFuCell(stepId);
+  return el;
+}
+function removeFollowupElement(stepId, elementId) {
+  const r = findStep(stepId); if (!r) return;
+  const list = r.step.cells[FOLLOWUP_KEY]; if (!Array.isArray(list)) return;
+  const idx = list.findIndex(e => e.id === elementId); if (idx < 0) return;
+  list.splice(idx, 1);
+  save(); refreshFuCell(stepId);
+}
+
+// ─── Dictionary JSON export/import (touchpoints + follow-up channels) ────────
+function exportTouchpoints() {
+  const cat = currentCategory(); if (!cat) { flashToast('Add a category first'); return; }
+  downloadJson({ version: 1, kind: 'touchpoints', app: 'customer-journey', category: cat.name, touchpoints: (cat.touchpoints || []).map(t => t.name) }, 'touchpoints-' + safeFilename(cat.name) + '.json');
+  flashToast('✓ Touchpoints exported');
+}
+function exportFollowups() {
+  const cat = currentCategory(); if (!cat) { flashToast('Add a category first'); return; }
+  downloadJson({ version: 1, kind: 'followups', app: 'customer-journey', category: cat.name, followups: (cat.followups || []).map(t => t.name) }, 'followups-' + safeFilename(cat.name) + '.json');
+  flashToast('✓ Follow-up channels exported');
+}
+// raw items (strings or {name}) → trimmed unique names, first-wins on in-file duplicates
+function libNamesFromRaw(raw) {
+  const out = [];
+  (Array.isArray(raw) ? raw : []).forEach(t => {
+    const nm = (typeof t === 'string') ? t.trim() : ((t && typeof t === 'object' && typeof t.name === 'string') ? t.name.trim() : '');
+    if (nm && !out.some(n => n.toLowerCase() === nm.toLowerCase())) out.push(nm);
+  });
+  return out;
+}
+function importTouchpoints(data) {
+  const cat = currentCategory();
+  if (!cat) { flashToast('Add a category first'); return { added: 0, exists: 0 }; }
+  const raw = Array.isArray(data.touchpoints) ? data.touchpoints : (Array.isArray(data) ? data : []);
+  let added = 0, exists = 0;
+  libNamesFromRaw(raw).forEach(nm => {
+    const before = cat.touchpoints.length;
+    tpFindOrCreate(cat, nm);
+    if (cat.touchpoints.length !== before) added++; else exists++;
+  });
+  save(); renderGrid();
+  if (_tpManagerRefresh) _tpManagerRefresh();
+  return { added, exists };
+}
+function importFollowups(data) {
+  const cat = currentCategory();
+  if (!cat) { flashToast('Add a category first'); return { added: 0, exists: 0 }; }
+  let added = 0, exists = 0;
+  libNamesFromRaw(Array.isArray(data.followups) ? data.followups : []).forEach(nm => {
+    const before = cat.followups.length;
+    fuFindOrCreate(cat, nm);
+    if (cat.followups.length !== before) added++; else exists++;
+  });
+  save(); renderGrid();
+  if (_tpManagerRefresh) _tpManagerRefresh();
+  return { added, exists };
 }
 
 // ─── Image store (IndexedDB — blobs never touch localStorage) ────────────────
@@ -1369,7 +1507,7 @@ function startEdit(spanEl, current, onCommit) {
   input.addEventListener('blur', commit);
 }
 
-function startElementEdit(textSpan, stepId, slice, elementId, current) {
+function startElementEdit(textSpan, stepId, slice, elementId, current, field = 'text') {
   const input = document.createElement('input');
   input.className = 'el-edit';
   input.value = current;
@@ -1378,8 +1516,8 @@ function startElementEdit(textSpan, stepId, slice, elementId, current) {
   let done = false;
   const finish = (val) => {
     if (done) return; done = true;
-    if (val.trim() === '') { removeElement(stepId, slice, elementId); }
-    else { updateElement(stepId, slice, elementId, val); renderGrid(); }
+    if (field === 'text' && val.trim() === '') { removeElement(stepId, slice, elementId); }
+    else { updateElement(stepId, slice, elementId, val, field); renderGrid(); }
   };
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); finish(input.value); }
@@ -1408,14 +1546,49 @@ function refreshTpCell(stepId) {
   cell.textContent = '';
   cell.appendChild(buildCellElements(r.step, TOUCHPOINT_KEY));
 }
+// Rebuild a single Follow-ups cell in place
+function refreshFuCell(stepId) {
+  const r = findStep(stepId); if (!r) return;
+  const cell = gridEl.querySelector(`.g-cell.fu-cell[data-step-id="${stepId}"]`);
+  if (!cell) return;
+  cell.textContent = '';
+  cell.appendChild(buildCellElements(r.step, FOLLOWUP_KEY));
+}
+// After a channel is picked: jump straight into editing the new element's message text
+function focusNewFollowupText(stepId, elementId) {
+  const cell = gridEl.querySelector(`.g-cell.fu-cell[data-step-id="${stepId}"]`);
+  const span = cell && cell.querySelector(`.element[data-el-id="${elementId}"] .el-text`);
+  if (span) startElementEdit(span, stepId, FOLLOWUP_KEY, elementId, '', 'text');
+}
 
-function openTpPicker(anchor, step) {
+// Library configs — one picker/manager factory drives every dictionary row
+const TP_CFG = {
+  key: TOUCHPOINT_KEY, elRef: 'tpId', itemLabel: 'touchpoint', multiAdd: true,
+  pickerAria: 'Pick touchpoints', emptyPicker: 'No touchpoints yet — add one below.',
+  managerTitle: 'Touchpoints', emptyManager: 'No touchpoints yet — add the first one above.',
+  itemsOf: cat => cat.touchpoints || [],
+  add: addTouchpoint, rename: renameTouchpoint, remove: removeTouchpoint, move: moveTouchpoint,
+  usage: touchpointUsage, exportFile: exportTouchpoints,
+  addEl: addTouchpointElement, removeEl: removeTouchpointElement, afterAdd: null,
+};
+const FU_CFG = {
+  key: FOLLOWUP_KEY, elRef: 'fuId', itemLabel: 'follow-up channel', multiAdd: false,
+  pickerAria: 'Pick a follow-up channel', emptyPicker: 'No channels yet — add one below.',
+  managerTitle: 'Follow-up channels', emptyManager: 'No follow-up channels yet — add the first one above.',
+  itemsOf: cat => cat.followups || [],
+  add: addFollowup, rename: renameFollowup, remove: removeFollowup, move: moveFollowup,
+  usage: followupUsage, exportFile: exportFollowups,
+  addEl: addFollowupElement, removeEl: null,
+  afterAdd: (step, el) => { if (el) focusNewFollowupText(step.id, el.id); },
+};
+
+function openLibPicker(anchor, step, cfg) {
   closeTpPicker();
   const cat = currentCategory(); if (!cat) return;
   const pop = document.createElement('div');
   pop.className = 'tp-picker';
   pop.setAttribute('role', 'dialog');
-  pop.setAttribute('aria-label', 'Pick touchpoints');
+  pop.setAttribute('aria-label', cfg.pickerAria);
   document.body.appendChild(pop);
   const rect = anchor.getBoundingClientRect();
   const w = pop.offsetWidth || 220;
@@ -1428,14 +1601,15 @@ function openTpPicker(anchor, step) {
   function renderPicker() {
     pop.textContent = '';
     const filter = filterRaw.trim().toLowerCase();
-    const present = new Set((step.cells[TOUCHPOINT_KEY] || []).map(e => e.tpId));
-    const items = cat.touchpoints.filter(t => t.name.toLowerCase().includes(filter));
+    const all = cfg.itemsOf(cat);
+    const present = new Set((step.cells[cfg.key] || []).map(e => e[cfg.elRef]));
+    const items = all.filter(t => t.name.toLowerCase().includes(filter));
 
-    if (cat.touchpoints.length > 8) {
+    if (all.length > 8) {
       const inp = document.createElement('input');
       inp.type = 'text'; inp.className = 'tp-filter'; inp.value = filterRaw;
       inp.placeholder = 'Filter…';
-      inp.setAttribute('aria-label', 'Filter touchpoints');
+      inp.setAttribute('aria-label', `Filter ${cfg.itemLabel}s`);
       inp.addEventListener('input', () => {
         filterRaw = inp.value;
         renderPicker();
@@ -1447,11 +1621,11 @@ function openTpPicker(anchor, step) {
     if (items.length === 0) {
       const none = document.createElement('div');
       none.className = 'tp-none';
-      none.textContent = cat.touchpoints.length === 0 ? 'No touchpoints yet — add one below.' : 'No match';
+      none.textContent = all.length === 0 ? cfg.emptyPicker : 'No match';
       pop.appendChild(none);
     }
     items.forEach(t => {
-      const isPresent = present.has(t.id);
+      const isPresent = cfg.multiAdd && present.has(t.id);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tp-item' + (isPresent ? ' present' : '');
@@ -1462,9 +1636,16 @@ function openTpPicker(anchor, step) {
       btn.appendChild(chk); btn.appendChild(nm);
       btn.addEventListener('click', ev => {
         ev.stopPropagation();
-        if (isPresent) removeTouchpointElement(step.id, t.id);
-        else addTouchpointElement(step.id, t.id);
-        renderPicker(); // refresh presence marks — stays open for multi-add
+        if (cfg.multiAdd) {
+          if (isPresent) cfg.removeEl(step.id, t.id);
+          else cfg.addEl(step.id, t.id);
+          renderPicker(); // refresh presence marks — stays open for multi-add
+        } else {
+          // single-add: create the element, close, jump into its message text
+          const el = cfg.addEl(step.id, t.id);
+          closeTpPicker();
+          if (cfg.afterAdd) cfg.afterAdd(step, el);
+        }
       });
       pop.appendChild(btn);
     });
@@ -1472,15 +1653,18 @@ function openTpPicker(anchor, step) {
     if (adding) {
       const inp = document.createElement('input');
       inp.type = 'text'; inp.className = 'tp-input'; inp.value = filterRaw;
-      inp.placeholder = 'New touchpoint name…';
-      inp.setAttribute('aria-label', 'New touchpoint name');
+      inp.placeholder = `New ${cfg.itemLabel} name…`;
+      inp.setAttribute('aria-label', `New ${cfg.itemLabel} name`);
       inp.addEventListener('keydown', ev => {
         ev.stopPropagation();
         if (ev.key === 'Enter') {
           ev.preventDefault();
-          const item = addTouchpoint(inp.value);
-          if (item && String(inp.value).trim()) { save(); addTouchpointElement(step.id, item.id); }
-          adding = false; renderPicker();
+          const item = cfg.add(inp.value);
+          if (item && String(inp.value).trim()) {
+            save();
+            if (cfg.multiAdd) { cfg.addEl(step.id, item.id); adding = false; renderPicker(); }
+            else { const el = cfg.addEl(step.id, item.id); closeTpPicker(); if (cfg.afterAdd) cfg.afterAdd(step, el); }
+          } else { adding = false; renderPicker(); }
         }
         if (ev.key === 'Escape') { adding = false; renderPicker(); }
       });
@@ -1488,12 +1672,12 @@ function openTpPicker(anchor, step) {
       setTimeout(() => { inp.focus(); inp.select(); }, 0);
     } else {
       const newBtn = document.createElement('button');
-      newBtn.type = 'button'; newBtn.className = 'tp-extra'; newBtn.textContent = '＋ New touchpoint…';
+      newBtn.type = 'button'; newBtn.className = 'tp-extra'; newBtn.textContent = `＋ New ${cfg.itemLabel}…`;
       newBtn.addEventListener('click', ev => { ev.stopPropagation(); adding = true; renderPicker(); });
       pop.appendChild(newBtn);
       const mgrBtn = document.createElement('button');
       mgrBtn.type = 'button'; mgrBtn.className = 'tp-extra'; mgrBtn.textContent = '⚙ Manage list…';
-      mgrBtn.addEventListener('click', ev => { ev.stopPropagation(); closeTpPicker(); openTouchpointManager(); });
+      mgrBtn.addEventListener('click', ev => { ev.stopPropagation(); closeTpPicker(); openLibManager(cfg); });
       pop.appendChild(mgrBtn);
     }
   }
@@ -1522,7 +1706,7 @@ function openTpPicker(anchor, step) {
 }
 
 let _tmDrag = null;
-function openTouchpointManager() {
+function openLibManager(cfg) {
   const cat = currentCategory(); if (!cat) return;
   closeTpPicker();
   const prevFocus = document.activeElement;
@@ -1530,32 +1714,32 @@ function openTouchpointManager() {
   overlay.className = 'overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', `Touchpoints — ${cat.name}`);
+  overlay.setAttribute('aria-label', `${cfg.managerTitle} — ${cat.name}`);
   const card = document.createElement('div');
   card.className = 'tp-manager';
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button'; closeBtn.className = 'tm-close'; closeBtn.textContent = '×';
-  closeBtn.setAttribute('aria-label', 'Close touchpoint manager');
+  closeBtn.setAttribute('aria-label', `Close ${cfg.managerTitle.toLowerCase()} manager`);
   closeBtn.title = 'Close (Escape)';
   card.appendChild(closeBtn);
 
-  const h = document.createElement('h2'); h.textContent = 'Touchpoints'; card.appendChild(h);
+  const h = document.createElement('h2'); h.textContent = cfg.managerTitle; card.appendChild(h);
   const sub = document.createElement('div'); sub.className = 'tm-sub'; sub.textContent = cat.name; card.appendChild(sub);
 
   const toolbar = document.createElement('div'); toolbar.className = 'tm-toolbar';
   const addInput = document.createElement('input');
-  addInput.type = 'text'; addInput.className = 'tm-add-input'; addInput.placeholder = 'New touchpoint…';
-  addInput.setAttribute('aria-label', 'New touchpoint name');
+  addInput.type = 'text'; addInput.className = 'tm-add-input'; addInput.placeholder = `New ${cfg.itemLabel}…`;
+  addInput.setAttribute('aria-label', `New ${cfg.itemLabel} name`);
   const addBtn = document.createElement('button');
   addBtn.type = 'button'; addBtn.className = 'btn btn-primary btn-sm'; addBtn.textContent = 'Add';
   const expBtn = document.createElement('button');
   expBtn.type = 'button'; expBtn.className = 'btn btn-ghost btn-sm'; expBtn.textContent = '↧ Export';
-  expBtn.title = "Export this category's touchpoints as JSON";
-  expBtn.addEventListener('click', exportTouchpoints);
+  expBtn.title = `Export this category's ${cfg.itemLabel}s as JSON`;
+  expBtn.addEventListener('click', cfg.exportFile);
   const impBtn = document.createElement('button');
   impBtn.type = 'button'; impBtn.className = 'btn btn-ghost btn-sm'; impBtn.textContent = '↥ Import';
-  impBtn.title = 'Import touchpoints from JSON into this category';
+  impBtn.title = `Import ${cfg.itemLabel}s from JSON into this category`;
   impBtn.addEventListener('click', () => document.getElementById('import-file').click());
   toolbar.appendChild(addInput); toolbar.appendChild(addBtn); toolbar.appendChild(expBtn); toolbar.appendChild(impBtn);
   card.appendChild(toolbar);
@@ -1565,10 +1749,10 @@ function openTouchpointManager() {
 
   function commitAdd() {
     const nm = addInput.value.trim(); if (!nm) return;
-    const before = cat.touchpoints.length;
-    const item = addTouchpoint(nm);
+    const before = cfg.itemsOf(cat).length;
+    const item = cfg.add(nm);
     if (!item) return;
-    if (cat.touchpoints.length !== before) save();
+    if (cfg.itemsOf(cat).length !== before) save();
     addInput.value = '';
     renderList(); renderGrid();
     addInput.focus();
@@ -1578,14 +1762,15 @@ function openTouchpointManager() {
 
   function renderList() {
     listEl.textContent = '';
-    if (cat.touchpoints.length === 0) {
+    const items = cfg.itemsOf(cat);
+    if (items.length === 0) {
       const li = document.createElement('li');
       li.className = 'tm-empty';
-      li.textContent = 'No touchpoints yet — add the first one above.';
+      li.textContent = cfg.emptyManager;
       listEl.appendChild(li);
       return;
     }
-    cat.touchpoints.forEach((t, i) => {
+    items.forEach((t, i) => {
       const li = document.createElement('li');
       li.className = 'tm-row';
       li.draggable = true;
@@ -1595,12 +1780,12 @@ function openTouchpointManager() {
       const doRename = v => {
         const nm = String(v || '').trim();
         if (!nm || nm === t.name) return;
-        renameTouchpoint(t.id, nm);
+        cfg.rename(t.id, nm);
         renderList(); renderGrid();
       };
       nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startEdit(nameSpan, t.name, doRename); });
 
-      const uses = touchpointUsage(cat, t.id);
+      const uses = cfg.usage(cat, t.id);
       const count = document.createElement('span'); count.className = 'tm-count'; count.textContent = `${uses}×`;
       count.title = `Used in ${uses} ${plural(uses, 'cell', 'cells')}`;
 
@@ -1612,7 +1797,7 @@ function openTouchpointManager() {
       removeBtn.setAttribute('aria-label', `Remove ${t.name}`); removeBtn.title = 'Remove';
       removeBtn.addEventListener('click', e => {
         e.stopPropagation();
-        removeTouchpoint(t.id); // confirm + cascade when in use
+        cfg.remove(t.id); // confirm + cascade when in use
         renderList(); renderGrid();
       });
 
@@ -1633,7 +1818,7 @@ function openTouchpointManager() {
         const mid = rect.top + rect.height / 2;
         let to = i + (e.clientY >= mid ? 1 : 0);
         if (_tmDrag.from < to) to--;
-        moveTouchpoint(_tmDrag.from, to);
+        cfg.move(_tmDrag.from, to);
         renderList();
       });
 
@@ -2123,14 +2308,15 @@ function renderGrid() {
     label.className = 'g-slice-label';
     label.textContent = slice.label;
     label.setAttribute('role', 'rowheader');
-    if (slice.key === TOUCHPOINT_KEY) {
+    if (slice.key === TOUCHPOINT_KEY || slice.key === FOLLOWUP_KEY) {
+      const isTpGear = slice.key === TOUCHPOINT_KEY;
       const gear = document.createElement('button');
       gear.type = 'button';
       gear.className = 'slice-manage';
       gear.textContent = '⚙';
-      gear.setAttribute('aria-label', 'Manage touchpoints');
-      gear.title = 'Manage touchpoints';
-      gear.addEventListener('click', ev => { ev.stopPropagation(); openTouchpointManager(); });
+      gear.setAttribute('aria-label', isTpGear ? 'Manage touchpoints' : 'Manage follow-up channels');
+      gear.title = isTpGear ? 'Manage touchpoints' : 'Manage follow-up channels';
+      gear.addEventListener('click', ev => { ev.stopPropagation(); openLibManager(isTpGear ? TP_CFG : FU_CFG); });
       label.appendChild(gear);
     }
     place(label, row, 1);
@@ -2140,8 +2326,8 @@ function renderGrid() {
       const colNum = 2 + col;
       const step = f.step;
       const cellEl = document.createElement('div');
-      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '') + (slice.key === SCREENSHOT_KEY ? ' shots-cell' : '') + (slice.key === TOUCHPOINT_KEY ? ' tp-cell' : '');
-      if (slice.key === TOUCHPOINT_KEY) cellEl.dataset.stepId = step.id;
+      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '') + (slice.key === SCREENSHOT_KEY ? ' shots-cell' : '') + (slice.key === TOUCHPOINT_KEY ? ' tp-cell' : '') + (slice.key === FOLLOWUP_KEY ? ' fu-cell' : '');
+      if (slice.key === TOUCHPOINT_KEY || slice.key === FOLLOWUP_KEY) cellEl.dataset.stepId = step.id;
       cellEl.setAttribute('role', 'gridcell');
       cellEl.setAttribute('aria-label', cellAriaLabel(slice, step));
       place(cellEl, row, colNum);
@@ -2181,18 +2367,39 @@ function buildCellElements(step, slice) {
   const wrap = document.createElement('div');
   wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '4px'; wrap.style.width = '100%';
   const isTp = slice === TOUCHPOINT_KEY; // touchpoint names come from the library — no inline text edit
+  const isFu = slice === FOLLOWUP_KEY;   // follow-up = channel chip + message text + action
   const list = step.cells[slice] || [];
   list.forEach((el, idx) => {
     const row = document.createElement('div');
-    row.className = 'element';
+    row.className = 'element' + (isFu ? ' fu-row' : '');
     row.draggable = true;
+    row.dataset.elId = el.id;
 
     const handle = document.createElement('span'); handle.className = 'el-handle'; handle.textContent = '⠿'; handle.setAttribute('aria-hidden', 'true');
-    const text = document.createElement('span'); text.className = 'el-text'; text.textContent = elementText(el, slice);
-    if (!isTp) text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, el.text); });
+    if (isFu) {
+      const chip = document.createElement('span');
+      chip.className = 'fu-chip';
+      chip.textContent = fuName(el.fuId) ?? '?';
+      chip.title = 'Follow-up channel';
+      row.appendChild(chip);
+    }
+    const text = document.createElement('span'); text.className = 'el-text'; text.textContent = isFu ? (el.text || '') : elementText(el, slice);
+    if (!isTp) text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, isFu ? (el.text || '') : el.text); });
+    if (isFu) {
+      const actionSpan = document.createElement('span');
+      actionSpan.className = 'fu-action';
+      actionSpan.textContent = el.action ? '→ ' + el.action : '';
+      actionSpan.title = 'Action — double-click to edit';
+      actionSpan.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(actionSpan, step.id, slice, el.id, el.action || '', 'action'); });
+      row.appendChild(actionSpan);
+    }
     const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'el-remove'; rm.textContent = '×';
     rm.setAttribute('aria-label', 'Remove item'); rm.title = 'Remove item';
-    rm.addEventListener('click', ev => { ev.stopPropagation(); removeElement(step.id, slice, el.id); });
+    rm.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (isFu) removeFollowupElement(step.id, el.id);
+      else removeElement(step.id, slice, el.id);
+    });
 
     row.addEventListener('dragstart', ev => { elementDrag = { stepId: step.id, slice, from: idx }; row.classList.add('dragging'); ev.stopPropagation(); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', ''); });
     row.addEventListener('dragend', () => { elementDrag = null; row.classList.remove('dragging'); wrap.querySelectorAll('.element').forEach(e => e.classList.remove('dragging')); });
@@ -2216,10 +2423,11 @@ function buildCellElements(step, slice) {
   });
 
   const addBtn = document.createElement('button');
-  addBtn.type = 'button'; addBtn.className = 'add-element'; addBtn.textContent = isTp ? '+ touchpoint' : '+ item';
+  addBtn.type = 'button'; addBtn.className = 'add-element'; addBtn.textContent = isTp ? '+ touchpoint' : (isFu ? '+ follow-up' : '+ item');
   addBtn.addEventListener('click', e => {
     e.stopPropagation();
-    if (isTp) openTpPicker(addBtn, step);
+    if (isTp) openLibPicker(addBtn, step, TP_CFG);
+    else if (isFu) openLibPicker(addBtn, step, FU_CFG);
     else addElement(step.id, slice);
   });
   wrap.appendChild(addBtn);
@@ -2521,8 +2729,21 @@ async function exportJourney() {
     const t = state.brandThemes.find(x => x.id === j.brandThemeId);
     if (t) theme = { name: t.name };
   }
+  // dictionary snapshots (id + name) so the importer can remap tpId/fuId by name
+  const tpList = [], fuList = [];
+  stepsOfJourney(j, []).forEach(step => {
+    ((step.cells || {})[TOUCHPOINT_KEY] || []).forEach(el => {
+      const name = tpName(el.tpId) ?? el.text;
+      if (name && !tpList.some(x => x.name === name)) tpList.push({ id: el.tpId, name });
+    });
+    ((step.cells || {})[FOLLOWUP_KEY] || []).forEach(el => {
+      const t = currentFollowups().find(x => x.id === el.fuId);
+      if (t && !fuList.some(x => x.id === t.id)) fuList.push({ id: t.id, name: t.name });
+    });
+  });
   const data = { version: 1, kind: 'journey', app: 'customer-journey',
-    journey: JSON.parse(JSON.stringify(j)), persona, theme, images };
+    journey: JSON.parse(JSON.stringify(j)), persona, theme, images,
+    touchpoints: tpList, followups: fuList };
   downloadJson(data, safeFilename(j.title) + '.json');
   flashToast('✓ Journey exported');
 }
@@ -2614,15 +2835,29 @@ async function importDatabase(data) {
   const steps = [];
   categories.forEach(cat => {
     cat.id = uid();
+    // resolve legacy free-text touchpoints; ensure the follow-up library exists
+    migrateCategoryTouchpoints(cat);
+    normalizeCategoryFollowups(cat);
+    // regen dictionary ids and remap element refs (tpId/fuId) within the category
+    const tpMap = {}, fuMap = {};
+    (cat.touchpoints || []).forEach(t => { const old = t.id; t.id = uid(); if (old != null) tpMap[old] = t.id; });
+    (cat.followups || []).forEach(t => { const old = t.id; t.id = uid(); if (old != null) fuMap[old] = t.id; });
     (cat.journeys || []).forEach(j => {
       normalizeJourney(j); regenJourney(j);
       stepsOfJourney(j, steps);
+      j.stages.forEach(st => st.steps.forEach(step => {
+        const tpl = (step.cells || {})[TOUCHPOINT_KEY];
+        if (Array.isArray(tpl)) tpl.forEach(el => { if (el && el.tpId != null && tpMap[el.tpId] != null) el.tpId = tpMap[el.tpId]; });
+        const ful = (step.cells || {})[FOLLOWUP_KEY];
+        if (Array.isArray(ful)) ful.forEach(el => {
+          if (el && el.fuId != null && fuMap[el.fuId] != null) el.fuId = fuMap[el.fuId];
+          if (el) { if (typeof el.text !== 'string') el.text = ''; if (typeof el.action !== 'string') el.action = ''; }
+        });
+      }));
       j.personaId = (j.personaId != null && personaMap[j.personaId] != null) ? personaMap[j.personaId] : null;
       j.brandThemeId = (j.brandThemeId != null && themeMap[j.brandThemeId] != null) ? themeMap[j.brandThemeId] : null;
     });
   });
-  // touchpoint library: resolve old free-text backups into per-category libraries
-  categories.forEach(cat => migrateCategoryTouchpoints(cat));
   await importImagesIntoDb(data, steps);
   state.categories = categories;
   state.personas = personas;
@@ -2658,6 +2893,34 @@ async function importJourney(data) {
   normalizeJourney(j); regenJourney(j);
   j.personaId = personaId;
   j.brandThemeId = brandThemeId;
+  // resolve dictionary references into the target category's libraries (by name, find-or-create)
+  const tpMap = {}, fuMap = {};
+  (Array.isArray(data.touchpoints) ? data.touchpoints : []).forEach(t => {
+    if (t && typeof t.name === 'string' && t.name.trim()) {
+      const it = tpFindOrCreate(cat, t.name);
+      if (t.id != null) tpMap[t.id] = it.id;
+    }
+  });
+  (Array.isArray(data.followups) ? data.followups : []).forEach(t => {
+    if (t && typeof t.name === 'string' && t.name.trim()) {
+      const it = fuFindOrCreate(cat, t.name);
+      if (t.id != null) fuMap[t.id] = it.id;
+    }
+  });
+  j.stages.forEach(st => st.steps.forEach(step => {
+    const tpl = (step.cells || {})[TOUCHPOINT_KEY];
+    if (Array.isArray(tpl)) tpl.forEach(el => {
+      if (el && el.tpId != null && tpMap[el.tpId] != null) { el.tpId = tpMap[el.tpId]; el.text = tpName(el.tpId) ?? el.text; }
+      else if (el && el.tpId == null && typeof el.text === 'string' && el.text.trim()) {
+        const it = tpFindOrCreate(cat, el.text); el.tpId = it.id; el.text = it.name; // old export: resolve via snapshot
+      }
+    });
+    const ful = (step.cells || {})[FOLLOWUP_KEY];
+    if (Array.isArray(ful)) ful.forEach(el => {
+      if (el && el.fuId != null && fuMap[el.fuId] != null) el.fuId = fuMap[el.fuId];
+      if (el) { if (typeof el.text !== 'string') el.text = ''; if (typeof el.action !== 'string') el.action = ''; }
+    });
+  }));
   await importImagesIntoDb(data, stepsOfJourney(j, []));
   cat.journeys.push(j);
   state.activeJourney = cat.journeys.length - 1;
@@ -2682,6 +2945,13 @@ function importFromFile(file) {
                  (Array.isArray(data) && data.length > 0 && data.every(t => t && typeof t === 'object' && typeof t.name === 'string')))) {
         const r = importBrandThemes(data);
         flashToast(`✓ Themes imported (${r.added} added, ${r.updated} updated)`);
+      } else if (data && (data.kind === 'touchpoints' || Array.isArray(data.touchpoints) ||
+                 (Array.isArray(data) && data.length > 0 && data.every(t => typeof t === 'string')))) {
+        const r = importTouchpoints(data);
+        flashToast(`✓ Touchpoints imported (${r.added} added, ${r.exists} exist)`);
+      } else if (data && (data.kind === 'followups' || Array.isArray(data.followups))) {
+        const r = importFollowups(data);
+        flashToast(`✓ Follow-up channels imported (${r.added} added, ${r.exists} exist)`);
       } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
         await importJourney(data);
         flashToast('✓ Journey imported');
