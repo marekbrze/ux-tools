@@ -545,3 +545,36 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 11. **Journey export/import** — `exportJourney()` (index.html:2063): add `touchpoints: [{name}]` — unique names referenced by the journey, first-use order. `importJourney()` (index.html:2184): after normalize + regen, resolve each touchpoint element in the target category: find-or-create a library item by `el.text` (fallback: the snapshot list by position) → set `el.tpId` + refresh `el.text`. Old journey exports (no `touchpoints` field) still resolve via element texts.
 12. **CSS** (tokens only): manager modal (`.tm-*` — reuse the persona-card overlay/panel/shadow), picker (`.tp-picker`, `.tp-item` + present/checked state, `.tp-new`, `.tp-filter`), `.slice-manage` (hover-reveal ⚙), usage chip via `--chip`/`--chip-text`. A11y: dialog roles, `aria-label`s on ⚙/✎/×/⠿, visible `:focus-visible`, picker operable from the keyboard (arrows + Enter, Escape closes).
 13. **Regression**: other slices keep inline text editing, drag-reorder and PNG rendering untouched; personas/themes/screenshots/emotion flows unchanged; migration is idempotent (safe on every boot); the widened import chain must not swallow existing kinds (database needs `.categories`, personas `.kind === 'personas'`, themes object-arrays, journey `.journey`/`.stages` — a bare string array matches none of them).
+
+### Change 11 — feature: readable screenshots — full-width in cell + big in PNG export (2026-08-24)
+**Status**: planned — route to ux-build
+
+**User goal**
+Screenshots must be readable, not just recognizable: in the grid AND in the exported PNG. The export is consumed **digitally** (scrollable, no need to see everything at once; sometimes displayed on a TV/projector) — so the PNG may simply be much bigger; there is no A4 constraint. On screen the user chose **full-width images stacked vertically in the cell** (cropping-free, tallest cells, most reading room).
+
+**MVP scope**
+- **Grid**: the Screenshots cell renders screenshots as a **vertical stack of full-cell-width images** — no cropping (`object-fit: contain`), height from the stored aspect ratio; `+` becomes a full-width dashed add-bar. Step columns widen (`STEP_COL_W` 220 → 300) so "full width" means real reading room. Portrait/very tall screenshots get a max-height cap (letterboxed, still no crop).
+- **PNG export**: step columns widen (`colW` 200 → 440, `labelW` 140 → 170) and the Screenshots band draws images **stacked at (near) full column width** (single-image height cap ~360px) instead of today's 72px strip; band height computed dynamically per the tallest column (existing mechanism, new plan semantics). Missing blobs → dashed placeholder at the stacked size.
+
+**Later (deferred)**
+- S/M/L size control for the Screenshots row (per interview — fixed layout chosen for MVP).
+- Proportional scaling of the **whole** export (fonts/labels together with columns) — explicitly deferred by the user ("Yes, cut it" over "Scale whole export").
+- Screenshot captions + drag-reorder of thumbnails in a cell (already Change 7 Later).
+
+**Impact**
+- **Data**: none — presentation only. No new entities/fields, no storage change, **no key version bump**.
+- **Actions**: none new; `exportPng()` internals change (layout constants + shot band layout).
+- **Screens**: Screenshots row in the grid (stacked full-width thumbs, full-width add-bar); PNG export column widths. No new surfaces or nav.
+- **States**: none new; the empty Screenshots cell shows the full-width dashed add-bar (existing empty state, restyled).
+- **Interactions**: unchanged — click thumbnail → lightbox, hover × → remove, drag & drop files onto cell, Ctrl+V paste, file picker. Keyboard/focus untouched.
+- **Edge cases**: portrait/tall screenshots → max-height cap with `contain` (no crop, centered) so a single phone screenshot can't make a cell absurdly tall; many screenshots per cell → tall row (accepted — digital, scrollable); export row height = tallest column's stack; very many steps × wider columns → canvas stays within browser limits (~32k px — 440px × realistic step counts is far below); missing blob in IDB → dashed placeholder at the stacked slot size (existing pattern).
+- **Glossary**: none new.
+
+**Build instructions for ux-build**
+1. **Grid CSS** (`index.html:278-300`): `.g-cell .shots` → `flex-direction: column; gap: 6px;` (keep `width: 100%`). `.shot-thumb` → `width: 100%; height: auto; max-height: 440px;` (drop `height: 56px` and `flex-shrink`; keep border/radius/background; the inline `aspect-ratio` set at `index.html:1138` stays). `.shot-thumb img` → `width: 100%; height: 100%; object-fit: contain;` (drop `height: 100%; width: auto; max-width: 160px; cover`). `.shot-add` → `width: 100%; height: 48px;` (full-width dashed bar; drop the 34×56 box). Hover-reveal `.shot-remove` unchanged (top-right of the thumb).
+2. **Column width**: `STEP_COL_W` 220 → 300 (`index.html:452`). `LABEL_COL_W` unchanged (150). The grid already scrolls horizontally for many steps.
+3. **Export constants** (`index.html:2287`): `colW: 200 → 440`, `labelW: 140 → 170`. Fonts and the rest of the metrics stay as-is (deferred by the user).
+4. **`shotDrawPlan` → stacked** (`index.html:2255-2267`): per shot — `dw = availW; dh = h * (availW / w);` if `dh > maxH` (new param, 360) → `dh = maxH; dw = w * (maxH / h);` round. `contentH = Σ dh + gap * (n-1)` (+ `Math.max(12, …)` floor). Return `{ gap, places, contentH }` (`slotW` no longer meaningful — drop it and its uses).
+5. **Band height** (`index.html:2306-2312`): keep the max-over-columns logic, now feeding the stacked plan: `shotDrawPlan(shots, colW - 16, 360)`; `h = any ? maxH + 14 : 34`.
+6. **Band drawing** (`index.html:2382-2404`): iterate the stack — `dx = x1 + 8 + (availW - dw) / 2` (centers capped/portrait images), `dy` starts at `y + 7` and advances `dh + gap`; bitmap via `ctx.drawImage`, missing blob → dashed `strokeRect` at the same slot; keep the soft 1px inner border.
+7. **Regression check**: lightbox, add (picker/drag&drop/paste), remove + blob cascade, drag-over highlight, JSON export/import, brand themes, emotion row, other slices' inline editing — all untouched; only the Screenshots row's geometry changes (screen + PNG). Verify a journey with 0 shots (band height 34, "—" placeholder), 1 shot, mixed landscape/portrait shots, and a missing blob (placeholder path).
