@@ -550,7 +550,7 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 **Status**: built — static verification passed (script syntax, no stale references); click-test pending
 
 ### Change 12 — bug: touchpoint library unreachable — picker/manager never wired into UI (2026-08-24)
-**Status**: diagnosed — route to ux-build
+**Status**: built — all 4 fix points applied; static verification passed (syntax, call sites, picker teardown)
 **Severity**: 🟡 medium — Change 10's core workflow (manage touchpoints in one place, pick from the list in cells) is completely unreachable; no data loss, the rest of the app works, old free-text behavior persists as a de-facto fallback.
 
 **Reproduction**

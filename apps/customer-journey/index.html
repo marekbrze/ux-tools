@@ -1978,6 +1978,7 @@ function rowWrap() {
 
 function renderGrid() {
   applyBrandThemeToGrid();
+  closeTpPicker(); // a full grid rebuild invalidates the picker's anchor/step
   const j = currentJourney();
   gridEl.innerHTML = '';
   if (!j) return;
@@ -2109,6 +2110,16 @@ function renderGrid() {
     label.className = 'g-slice-label';
     label.textContent = slice.label;
     label.setAttribute('role', 'rowheader');
+    if (slice.key === TOUCHPOINT_KEY) {
+      const gear = document.createElement('button');
+      gear.type = 'button';
+      gear.className = 'slice-manage';
+      gear.textContent = '⚙';
+      gear.setAttribute('aria-label', 'Manage touchpoints');
+      gear.title = 'Manage touchpoints';
+      gear.addEventListener('click', ev => { ev.stopPropagation(); openTouchpointManager(); });
+      label.appendChild(gear);
+    }
     place(label, row, 1);
     rs.appendChild(label);
 
@@ -2116,7 +2127,8 @@ function renderGrid() {
       const colNum = 2 + col;
       const step = f.step;
       const cellEl = document.createElement('div');
-      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '') + (slice.key === SCREENSHOT_KEY ? ' shots-cell' : '');
+      cellEl.className = 'g-cell' + (slice.key === EMOTION_KEY ? ' emotion-cell' : '') + (slice.key === SCREENSHOT_KEY ? ' shots-cell' : '') + (slice.key === TOUCHPOINT_KEY ? ' tp-cell' : '');
+      if (slice.key === TOUCHPOINT_KEY) cellEl.dataset.stepId = step.id;
       cellEl.setAttribute('role', 'gridcell');
       cellEl.setAttribute('aria-label', cellAriaLabel(slice, step));
       place(cellEl, row, colNum);
@@ -2140,7 +2152,7 @@ function cellAriaLabel(slice, step) {
     detail = l.length ? `${l.length} ${plural(l.length, 'screenshot', 'screenshots')}` : 'no screenshots';
   } else {
     const list = step.cells[slice.key] || [];
-    detail = list.map(e => e.text).filter(Boolean).join('; ') || 'empty';
+    detail = list.map(e => elementText(e, slice.key)).filter(Boolean).join('; ') || 'empty';
   }
   return `${slice.label}, ${step.name}: ${detail}`;
 }
@@ -2155,6 +2167,7 @@ function place(el, row, colStart, colEnd) {
 function buildCellElements(step, slice) {
   const wrap = document.createElement('div');
   wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '4px'; wrap.style.width = '100%';
+  const isTp = slice === TOUCHPOINT_KEY; // touchpoint names come from the library — no inline text edit
   const list = step.cells[slice] || [];
   list.forEach((el, idx) => {
     const row = document.createElement('div');
@@ -2162,8 +2175,8 @@ function buildCellElements(step, slice) {
     row.draggable = true;
 
     const handle = document.createElement('span'); handle.className = 'el-handle'; handle.textContent = '⠿'; handle.setAttribute('aria-hidden', 'true');
-    const text = document.createElement('span'); text.className = 'el-text'; text.textContent = el.text;
-    text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, el.text); });
+    const text = document.createElement('span'); text.className = 'el-text'; text.textContent = elementText(el, slice);
+    if (!isTp) text.addEventListener('dblclick', ev => { ev.stopPropagation(); startElementEdit(text, step.id, slice, el.id, el.text); });
     const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'el-remove'; rm.textContent = '×';
     rm.setAttribute('aria-label', 'Remove item'); rm.title = 'Remove item';
     rm.addEventListener('click', ev => { ev.stopPropagation(); removeElement(step.id, slice, el.id); });
@@ -2183,15 +2196,19 @@ function buildCellElements(step, slice) {
     row.appendChild(handle); row.appendChild(text); row.appendChild(rm);
     wrap.appendChild(row);
 
-    if (_pendingElementEdit && _pendingElementEdit.stepId === step.id && _pendingElementEdit.slice === slice && _pendingElementEdit.elementId === el.id) {
+    if (!isTp && _pendingElementEdit && _pendingElementEdit.stepId === step.id && _pendingElementEdit.slice === slice && _pendingElementEdit.elementId === el.id) {
       _pendingElementEdit = null;
       setTimeout(() => startElementEdit(text, step.id, slice, el.id, el.text), 0);
     }
   });
 
   const addBtn = document.createElement('button');
-  addBtn.type = 'button'; addBtn.className = 'add-element'; addBtn.textContent = '+ item';
-  addBtn.addEventListener('click', e => { e.stopPropagation(); addElement(step.id, slice); });
+  addBtn.type = 'button'; addBtn.className = 'add-element'; addBtn.textContent = isTp ? '+ touchpoint' : '+ item';
+  addBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (isTp) openTpPicker(addBtn, step);
+    else addElement(step.id, slice);
+  });
   wrap.appendChild(addBtn);
   return wrap;
 }
@@ -2406,7 +2423,7 @@ async function exportPng() {
         const list = f.step.cells[slice.key] || [];
         let ty = y + 16;
         list.forEach(el => {
-          const lines = wrapLines(el.text, colW - 18) || [''];
+          const lines = wrapLines(elementText(el, slice.key), colW - 18) || [''];
           ctx.fillStyle = C.text;
           lines.forEach(ln => { ctx.fillText(ln, x1 + 8, ty); ty += lineH; });
           ty += 2;
@@ -2590,6 +2607,8 @@ async function importDatabase(data) {
       j.brandThemeId = (j.brandThemeId != null && themeMap[j.brandThemeId] != null) ? themeMap[j.brandThemeId] : null;
     });
   });
+  // touchpoint library: resolve old free-text backups into per-category libraries
+  categories.forEach(cat => migrateCategoryTouchpoints(cat));
   await importImagesIntoDb(data, steps);
   state.categories = categories;
   state.personas = personas;
