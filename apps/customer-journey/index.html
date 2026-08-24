@@ -454,11 +454,13 @@ const STEP_COL_W  = 300;
 const SLICES = [
   { key: 'action',      label: 'Actions' },
   { key: 'touchpoint',  label: 'Touchpoints' },
-  { key: 'mindset',     label: 'Mindset' },
+  { key: 'insight',     label: 'Insights' },
   { key: 'emotion',     label: 'Emotions' },
   { key: 'pain-point',  label: 'Pain points' },
   { key: 'idea',        label: 'Ideas' },
-  { key: 'insight',     label: 'Insights' },
+  { key: 'backstage',   label: 'Backstage' },
+  { key: 'duration',    label: 'Duration' },
+  { key: 'metric',      label: 'Metrics' },
   { key: 'screenshots', label: 'Screenshots' },
 ];
 const EMOTION_KEY = 'emotion';
@@ -488,6 +490,16 @@ const state = {
 };
 
 function uid() { return state.nextId++; }
+
+// migration (Change 13): former Mindset slice merged into Insights —
+// per cell, mindset elements append after existing insights, then the key is dropped. Idempotent.
+function mergeMindsetIntoInsights(step) {
+  const c = step.cells || {};
+  if (Array.isArray(c.mindset)) {
+    (c.insight = Array.isArray(c.insight) ? c.insight : []).push(...c.mindset);
+    delete c.mindset;
+  }
+}
 
 function freshCells() {
   const c = {};
@@ -682,6 +694,7 @@ function load() {
       if (j.brandThemeId == null) j.brandThemeId = null;
       j.stages.forEach(st => st.steps.forEach(step => {
         const c = step.cells || (step.cells = {});
+        mergeMindsetIntoInsights(step);
         SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
       }));
     }));
@@ -2517,6 +2530,7 @@ async function exportJourney() {
 function normalizeStep(step, idx) {
   if (!step.name) step.name = `Step ${(idx ?? 0) + 1}`;
   const c = step.cells || (step.cells = {});
+  mergeMindsetIntoInsights(step);
   SLICES.forEach(s => { if (!(s.key in c)) c[s.key] = (s.key === EMOTION_KEY) ? null : []; });
 }
 function normalizeJourney(j) {

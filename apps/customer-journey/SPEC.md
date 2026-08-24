@@ -553,7 +553,7 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 **Status**: built — all 4 fix points applied; static verification passed (syntax, call sites, picker teardown)
 
 ### Change 13 — feature: tidy slice set — merge Mindset→Insights, add Backstage/Duration/Metrics (2026-08-24)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (syntax; `mindset` only in the migration helper; call sites in `load()` + `normalizeStep`)
 
 **User goal**
 Tidy up the journey rows: Touchpoints, Emotions, Pain points, Ideas and Screenshots must stay (and Actions — confirmed in the interview). Mindset and Insights felt like the same row — merged into **Insights**, understood as **the persona's first impression of the step** (`"pierwsze wrażenie osoby"`), placed **before Emotions and Pain points**. Three rows added: **Backstage** (what the bank/team does behind the scenes), **Duration** (customer-perceived time, e.g. "2 days waiting"), **Metrics** (KPI per step).
