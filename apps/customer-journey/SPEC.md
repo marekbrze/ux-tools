@@ -551,6 +551,42 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 
 ### Change 12 — bug: touchpoint library unreachable — picker/manager never wired into UI (2026-08-24)
 **Status**: built — all 4 fix points applied; static verification passed (syntax, call sites, picker teardown)
+
+### Change 13 — feature: tidy slice set — merge Mindset→Insights, add Backstage/Duration/Metrics (2026-08-24)
+**Status**: planned — route to ux-build
+
+**User goal**
+Tidy up the journey rows: Touchpoints, Emotions, Pain points, Ideas and Screenshots must stay (and Actions — confirmed in the interview). Mindset and Insights felt like the same row — merged into **Insights**, understood as **the persona's first impression of the step** (`"pierwsze wrażenie osoby"`), placed **before Emotions and Pain points**. Three rows added: **Backstage** (what the bank/team does behind the scenes), **Duration** (customer-perceived time, e.g. "2 days waiting"), **Metrics** (KPI per step).
+
+Final set — 10 rows, fixed and global (not per-journey):
+`Actions · Touchpoints · Insights · Emotions · Pain points · Ideas · Backstage · Duration · Metrics · Screenshots`
+
+**MVP scope**
+- `SLICES` reordered/merged/extended to the 10 rows above; **Mindset removed** with a data migration: per cell, `cells.mindset` elements **append to `cells.insight`** (existing insights first), then the `mindset` key is deleted.
+- Migration runs in `load()` **and** on import paths (old JSON backups/journey exports carrying `mindset`).
+- New rows are plain text-element rows (exactly like Ideas) — grid, PNG export, ARIA and normalization adapt automatically via the existing `SLICES` iteration.
+
+**Later (deferred)**
+- **Follow-up row** — elements combining a dictionary channel (push, SMS — the touchpoint-library pattern) + message text + an action; a structured element variant, its own Change.
+- Per-journey row visibility/reorder (a slice manager) — not needed while the set is fixed and global.
+- Structured Duration (number + unit) or typed metric values — plain text for now.
+
+**Impact**
+- **Data**: slice set is a code constant (never stored per step) — the only data change is the migration merging `mindset` element lists into `insight` and dropping the key. New keys (`backstage`, `duration`, `metric`) are backfilled empty by the existing normalization loops. **No key version bump** — additive, idempotent migration in `load()`/`normalizeStep`.
+- **Actions**: none new — new rows use the generic element CRUD (`addElement`/`startElementEdit`/drag-reorder).
+- **Screens**: 10 rows in the grid; nothing new UI-wise (⚙ stays on Touchpoints only).
+- **States**: new rows behave like Ideas (empty → "—" in grid and PNG).
+- **Interactions**: none new.
+- **Edge cases**: a cell with only mindset elements → they become the insights list; old journey/database exports with `mindset` → migrated on import via `normalizeStep`; PNG gets taller (10 rows) — fine, digital/scrollable is the format; idempotency — re-running the migration on already-migrated data is a no-op.
+- **Glossary**: `insight` (redefined: the persona's first impression of the step — absorbs the former `mindset`), `backstage`, `duration`, `metric`, `follow-up` (Later).
+- **Spec note**: Requirements §Data model enumerates 7 fixed slices — superseded by this Change's 10.
+
+**Build instructions for ux-build**
+1. **`SLICES`** (`index.html:454-464`): replace with the 10 rows in the order above (keys: `action, touchpoint, insight, emotion, pain-point, idea, backstage, duration, metric, screenshots`; labels: `Actions, Touchpoints, Insights, Emotions, Pain points, Ideas, Backstage, Duration, Metrics, Screenshots`). No `mindset` entry.
+2. **Migration helper**: `mergeMindsetIntoInsights(step)` — `const c = step.cells || {}; if (Array.isArray(c.mindset)) { (c.insight = Array.isArray(c.insight) ? c.insight : []).push(...c.mindset); delete c.mindset; }`. Idempotent by construction.
+3. **Call sites**: (a) `load()`'s cell-normalization walk (`index.html:685`, next to the `SLICES.forEach` fill — merge **before** the fill so `insight` exists); (b) `normalizeStep()` (`index.html:2517-2520`, before its `SLICES.forEach` fill) — this covers `importJourney` and `importDatabase` via `normalizeJourney`.
+4. **Auto-adapting (verify, no changes expected)**: `freshCells` (`index.html:492`), `renderGrid` row loop (`index.html:2105`), `exportPng` `sliceRows` (`index.html:2322`), `regenStep` (`index.html:2536`), `cellAriaLabel`, `buildCellElements` (generic path for the 3 new rows).
+5. **Regression check**: `grep mindset` after the change → only the migration helper and its call sites; touchpoint picker/⚙ wiring (Change 12) untouched (Touchpoints stays key row 2); emotion row logic keyed on `EMOTION_KEY`, unaffected by reordering; a journey with mindset-only cells → elements visible in Insights after refresh; old backup JSON → import migrates.
 **Severity**: 🟡 medium — Change 10's core workflow (manage touchpoints in one place, pick from the list in cells) is completely unreachable; no data loss, the rest of the app works, old free-text behavior persists as a de-facto fallback.
 
 **Reproduction**
