@@ -491,7 +491,7 @@ Import tolerance: `name` required (trim); `colors` optional object; per-key valu
 - Related edge cases: none new — the leftover seeded theme in existing state (item 4 above) is the only migration concern.
 
 ### Change 10 — feature: touchpoint library per category (2026-08-18)
-**Status**: planned — route to ux-build
+**Status**: built — implemented in commit 5b4c359 (checkpointed ux-build output; not separately click-tested)
 
 **User goal**
 Manage touchpoints in **one place per category** (a predefined list with add / rename / delete / reorder + JSON export/import), and in the grid pick touchpoints **from that list** instead of typing free text — with the ability to add a new item to the list right from the cell. Renaming a touchpoint updates every journey that uses it.
@@ -547,7 +547,7 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 13. **Regression**: other slices keep inline text editing, drag-reorder and PNG rendering untouched; personas/themes/screenshots/emotion flows unchanged; migration is idempotent (safe on every boot); the widened import chain must not swallow existing kinds (database needs `.categories`, personas `.kind === 'personas'`, themes object-arrays, journey `.journey`/`.stages` — a bare string array matches none of them).
 
 ### Change 11 — feature: readable screenshots — full-width in cell + big in PNG export (2026-08-24)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (script syntax, no stale references); click-test pending
 
 **User goal**
 Screenshots must be readable, not just recognizable: in the grid AND in the exported PNG. The export is consumed **digitally** (scrollable, no need to see everything at once; sometimes displayed on a TV/projector) — so the PNG may simply be much bigger; there is no A4 constraint. On screen the user chose **full-width images stacked vertically in the cell** (cropping-free, tallest cells, most reading room).

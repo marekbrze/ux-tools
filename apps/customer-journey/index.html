@@ -275,14 +275,14 @@
   /* storage error toast */
   #storage-error { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 10px 16px; font-size: 12px; z-index: 9999; max-width: 90vw; text-align: center; }
 
-  /* ── Screenshots row ── */
-  .g-cell .shots { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; align-items: flex-start; }
+  /* ── Screenshots row (stacked, full cell width, no cropping) ── */
+  .g-cell .shots { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: stretch; }
   .shot-thumb {
-    position: relative; height: 56px; width: auto; padding: 0; flex-shrink: 1; min-width: 20px;
+    position: relative; width: 100%; height: auto; max-height: 440px; padding: 0;
     border: 1px solid var(--element-border); border-radius: 4px; overflow: hidden;
     background: var(--element-bg); cursor: zoom-in;
   }
-  .shot-thumb img { display: block; height: 100%; width: auto; max-width: 160px; object-fit: cover; }
+  .shot-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
   .shot-thumb:hover { border-color: var(--accent); }
   .shot-thumb .shot-remove {
     position: absolute; top: 1px; right: 1px; width: 16px; height: 16px; line-height: 1;
@@ -292,8 +292,8 @@
   .shot-thumb:hover .shot-remove, .shot-thumb .shot-remove:focus-visible { opacity: 1; }
   .shot-thumb .shot-remove:hover { color: var(--danger); background: var(--danger-soft); }
   .shot-add {
-    width: 34px; height: 56px; border: 1px dashed var(--border); border-radius: 4px; cursor: pointer;
-    font-size: 14px; color: var(--text-4); background: transparent; flex-shrink: 0; padding: 0;
+    width: 100%; height: 48px; border: 1px dashed var(--border); border-radius: 4px; cursor: pointer;
+    font-size: 14px; color: var(--text-4); background: transparent; padding: 0;
   }
   .shot-add:hover { border-color: var(--accent); color: var(--accent-soft-text); }
   .g-cell.shots-cell.drag-over { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
@@ -449,7 +449,7 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'ux-customer-journey_v1';
 const LABEL_COL_W = 150;
-const STEP_COL_W  = 220;
+const STEP_COL_W  = 300;
 
 const SLICES = [
   { key: 'action',      label: 'Actions' },
@@ -2251,19 +2251,19 @@ function exportPalette() {
   };
 }
 
-// layout plan for a row of screenshot thumbnails inside a column (no bitmaps needed — uses metadata)
+// layout plan for a stack of full-column-width screenshots (no bitmaps needed — uses metadata)
 function shotDrawPlan(shots, availW, maxH) {
   const n = shots.length;
   if (!n) return null;
-  const gap = 6;
-  const slotW = Math.max(12, (availW - gap * (n - 1)) / n);
+  const gap = 8;
   const places = shots.map(s => {
     const w = s.w || 1, h = s.h || 1;
-    let dw = slotW, dh = h * (slotW / w);
+    let dw = availW, dh = h * (availW / w);
     if (dh > maxH) { dh = maxH; dw = w * (maxH / h); }
     return { dw: Math.round(dw), dh: Math.round(dh) };
   });
-  return { slotW, gap, places, contentH: Math.max(12, ...places.map(p => p.dh)) };
+  const contentH = Math.max(12, places.reduce((a, p) => a + p.dh, 0) + gap * (n - 1));
+  return { gap, places, contentH };
 }
 
 async function exportPng() {
@@ -2284,7 +2284,7 @@ async function exportPng() {
   }))));
 
   const C = exportPalette();
-  const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 140, colW = 200, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
+  const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 170, colW = 440, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
@@ -2306,7 +2306,7 @@ async function exportPng() {
     if (slice.key === SCREENSHOT_KEY) {
       let maxH = 0, any = false;
       flat.forEach(f => {
-        const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16, 72);
+        const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16, 360);
         if (plan) { any = true; maxH = Math.max(maxH, plan.contentH); }
       });
       return { slice, h: any ? maxH + 14 : 34 };
@@ -2383,12 +2383,12 @@ async function exportPng() {
         const shots = (f.step.cells || {})[SCREENSHOT_KEY] || [];
         if (shots.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
         else {
-          const plan = shotDrawPlan(shots, colW - 16, 72);
-          let sx = x1 + 8;
+          const availW = colW - 16;
+          const plan = shotDrawPlan(shots, availW, 360);
+          let dy = y + 7;
           shots.forEach((s, k) => {
             const { dw, dh } = plan.places[k];
-            const dx = sx + (plan.slotW - dw) / 2;
-            const dy = y + (h - dh) / 2;
+            const dx = x1 + 8 + (availW - dw) / 2;
             const bm = shotBmps.get(s.id);
             if (bm) { try { ctx.drawImage(bm, dx, dy, dw, dh); } catch (err) { /* skip */ } }
             else {
@@ -2399,7 +2399,7 @@ async function exportPng() {
             }
             ctx.strokeStyle = C.borderSoft;
             ctx.strokeRect(dx + 0.5, dy + 0.5, dw - 1, dh - 1);
-            sx += plan.slotW + plan.gap;
+            dy += dh + plan.gap;
           });
         }
       } else {
