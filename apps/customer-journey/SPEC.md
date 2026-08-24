@@ -549,6 +549,38 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 ### Change 11 — feature: readable screenshots — full-width in cell + big in PNG export (2026-08-24)
 **Status**: built — static verification passed (script syntax, no stale references); click-test pending
 
+### Change 12 — bug: touchpoint library unreachable — picker/manager never wired into UI (2026-08-24)
+**Status**: diagnosed — route to ux-build
+**Severity**: 🟡 medium — Change 10's core workflow (manage touchpoints in one place, pick from the list in cells) is completely unreachable; no data loss, the rest of the app works, old free-text behavior persists as a de-facto fallback.
+
+**Reproduction**
+1. Open a CJ → look at the Touchpoints row in the grid.
+2. A cell's add button says "+ item" → click → generic inline free-text edit; dblclick an existing element → inline text edit (pre-Change-10 behavior).
+3. Look for the library manager: no ⚙ on the "Touchpoints" row label; no entry in the header or sidebar — nothing anywhere opens the picker or the manager.
+**Expected** (Change 10): "+ touchpoint" in a cell opens a picker fed by the category's library; ⚙ on the Touchpoints slice label opens the manager modal. **Actual**: free-text editing; the picker, manager modal, CRUD and import/export all exist in code but have zero UI entry points. **Reliability**: every time — the entries are dead code (no call sites), not a conditional failure.
+**Location**: `index.html:2126` (grid routes touchpoint cells to the generic `buildCellElements` — no `TOUCHPOINT_KEY` branch), `index.html:2193` ("+ item" → `addElement`), `index.html:2108-2113` (slice label built without the ⚙), `index.html:1399` (`openTpPicker` — 0 call sites), `index.html:1483` (`openTouchpointManager`'s only entry — a row inside the unreachable picker), `index.html:529` (`elementText` — 0 call sites).
+
+**Root cause**
+**Class**: spec-vs-code drift — incomplete Change 10 build.
+**Cause**: The Change 10 build (checkpoint commit 5b4c359) implemented the internals — the picker (`openTpPicker`), the manager modal (`openTouchpointManager`), CRUD + migration + import/export, and the `.slice-manage` CSS — but never applied its own build instructions #5, #6 and #7: no ⚙ button is appended to the Touchpoints slice label, `buildCellElements` never branches for touchpoint cells (so the cell's `+` still calls the generic `addElement` and elements stay inline-editable free text), and `elementText` was never adopted at the display sites. Result: a fully implemented feature with no way to reach it.
+**Evidence**: `grep openTpPicker` → definition only (1399); `grep elementText` → definition only (529); display sites read the stale `el.text` snapshot directly: `index.html:2165` (cell text), `index.html:2141` (`cellAriaLabel`), `index.html:2409` (`exportPng`). `importDatabase` (2567) never calls `migrateCategoryTouchpoints` (only `load()` does, 689) — pre-Change-10 database backups imported after this build keep `tpId == null` elements outside the library. Spec (intent): SPEC.md Change 10 MVP scope + build instructions #5–#7.
+
+**Fix plan**
+- **Change** — wire the entry/display points exactly per Change 10 build instructions #5–#7:
+  1. `buildCellElements(step, slice)` (`index.html:2155`): branch for `slice === TOUCHPOINT_KEY` — add-button labeled "+ touchpoint" → `openTpPicker(btn, step)` instead of `addElement`; element rows render `elementText(el, slice)` and keep ⠿ drag-reorder + × remove, but **no dblclick/inline text edit** (the name comes from the library).
+  2. Slice-label construction (`index.html:2108-2113`): for `slice.key === TOUCHPOINT_KEY` append a ⚙ button (`class="slice-manage"`, CSS already at `index.html:330-332`, `aria-label="Manage touchpoints"`, hover-reveal) → `openTouchpointManager()`.
+  3. Display text via `elementText(el, slice.key)` at `index.html:2165` (cell), `index.html:2141` (`cellAriaLabel`), `index.html:2409` (`exportPng`) — live library name with the `text` snapshot as fallback.
+  4. Secondary: call `migrateCategoryTouchpoints(cat)` per imported category in `importDatabase()` (`index.html:2567`) so old backups resolve free-text elements into the library.
+- **Spec impact**: none — this is Change 10 implemented as specced; nothing beyond it.
+
+**Regression scope**
+- `buildCellElements` is shared by all non-emotion/non-screenshot slices — the branch must trigger only on `slice === TOUCHPOINT_KEY`; verify after the fix that action/mindset/pain-point/idea/insight cells still have "+ item", dblclick inline edit and drag-reorder.
+- `elementText(el, key)` is behavior-neutral for other slices (`key !== TOUCHPOINT_KEY` → returns `el.text`) — safe at all three sites.
+- Picker lifecycle: an open picker must close on grid re-render — `closeTpPicker` exists (`index.html:1382`); verify `renderGrid()` tears down `_tpPicker` at its top (Change 10 #6).
+- Touchpoint rows lose dblclick edit only (intended); `startElementEdit` untouched for other slices.
+- A11y: ⚙ needs `aria-label` + `:focus-visible` (CSS 331 covers it); picker rows keyboard-operable (arrows + Enter, Escape) per Change 10 #12.
+- `importDatabase` change is additive (idempotent migration) — verify a round-trip export → import of a current database changes nothing.
+
 **User goal**
 Screenshots must be readable, not just recognizable: in the grid AND in the exported PNG. The export is consumed **digitally** (scrollable, no need to see everything at once; sometimes displayed on a TV/projector) — so the PNG may simply be much bigger; there is no A4 constraint. On screen the user chose **full-width images stacked vertically in the cell** (cropping-free, tallest cells, most reading room).
 
