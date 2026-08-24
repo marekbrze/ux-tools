@@ -555,6 +555,61 @@ Import tolerance: `touchpoints` items as strings OR `{name}` objects (mixed OK);
 ### Change 13 — feature: tidy slice set — merge Mindset→Insights, add Backstage/Duration/Metrics (2026-08-24)
 **Status**: built — static verification passed (syntax; `mindset` only in the migration helper; call sites in `load()` + `normalizeStep`)
 
+### Change 14 — feature: Follow-ups row (channel dictionary + message + action) + touchpoint JSON gaps fixed (2026-08-24)
+**Status**: planned — route to ux-build
+
+**User goal**
+A **Follow-ups** row: each element = a **channel picked from a dictionary** (push, SMS, e-mail… — analogous to touchpoints, but a **separate dictionary**) + the **message text** + an **action** (free text, what the follow-up triggers). The row captures what the bank sends to the customer at a given step.
+
+**MVP scope**
+- **11th slice** `follow-up` (label "Follow-ups"), positioned right after Touchpoints.
+- **Follow-up channel dictionary per category** (`category.followups`): ⚙ manager on the row label (add / inline rename / delete with usage-count confirm + cascade / drag-reorder / ↧ ↥ JSON) and a picker on "+ follow-up" — mirrors the touchpoint pattern exactly.
+- **Element** `{ id, fuId, text, action }`: channel chip + editable message text + editable action (inline edit, Enter/blur/Escape); chip non-interactive in the MVP.
+- Picker is **single-add**: picking a channel creates the element, closes the picker and focuses the new element's text field.
+- Composed display in ARIA and PNG (`Channel · message → action`; empty parts omitted).
+- JSON: `kind: 'followups'` export/import (merge by name); journey export carries the used channel names, import re-resolves by name (find-or-create); database export/import carries `followups` with id regen + `fuId` remap.
+- **Folded fixes — pre-existing Change 10 gaps** (found while scoping): `exportTouchpoints`/`importTouchpoints` are *called but undefined* (manager ↧ → ReferenceError, `index.html:1555`); `importFromFile` has **no touchpoints branch** (a touchpoints JSON → "✗ Invalid file"); `exportJourney` carries no dictionary snapshot and `importJourney` doesn't resolve `tpId` (imported touchpoint elements show stale names, not library-linked).
+
+**Later (deferred)**
+- Click a follow-up's channel chip → re-pick the channel in place.
+- Message templates / reuse; a "delay" field (e.g. "2 days after"); per-channel icons or colors; an all-categories followups file.
+
+**Impact**
+- **Data**: + `category.followups: [{id, name}]` (localStorage, tiny); + slice `follow-up`; elements `{id, fuId, text, action}` in `cells['follow-up']`. Normalization backfills (array check + missing slice key). **No key version bump.**
+- **Actions**: follow-up dictionary CRUD (`addFollowup`/`renameFollowup`/`removeFollowup`/`moveFollowup`/`followupUsage`), `addFollowupElement`/`removeFollowupElement`, `exportFollowups`/`importFollowups`, import-detection branch; `startElementEdit` extended with a field param (text|action); touchpoint `exportTouchpoints`/`importTouchpoints` finally defined.
+- **Screens**: 11-row grid; ⚙ on the Follow-ups label; picker under "+ follow-up"; element rows with a channel chip. No sidebar changes.
+- **States**: empty dictionary (picker/manager empty states mirroring touchpoints); import with no active category → toast; channel-in-use delete → confirm + cascade; empty action simply omitted in display.
+- **Interactions**: same as touchpoints (picker keyboard nav, Escape/click-outside, inline rename in manager, drag-reorder) + two-field inline editing in cells.
+- **Edge cases**: channel rename → chips/composed displays update live (`fuId` resolution); deleting a channel in use → confirm + remove elements; journey import when a channel name doesn't exist → find-or-create; database import regens ids + remaps `fuId` (also `tpId` — the Change 10 #10 remap never landed); old data without `followups` → empty array.
+- **Glossary**: `follow-up` (row/element), `followup-channel` (dictionary item), `followup-library`, `followups-file` (`kind:'followups'`), `dictionary-factory` (the shared picker/manager mechanism).
+
+**`kind: 'followups'` contract format** (authored/stored in `marekbrze/business`, e.g. `customer-journey/followups-<process>.json`):
+```json
+{
+  "version": 1,
+  "kind": "followups",
+  "app": "customer-journey",
+  "category": "Cash loan",
+  "followups": ["Push", "SMS", "E-mail"]
+}
+```
+Items as strings OR `{name}` objects; `category` informational (import targets the **active** category); merge by name (trim, case-insensitive), first-wins on in-file duplicates. A **bare string array is NOT claimed** by this branch (touchpoints already owns it) — objects or no-wrapper files need `kind:'followups'` or a `followups` key.
+
+**Build instructions for ux-build**
+1. **Constants + slice**: `const FOLLOWUP_KEY = 'follow-up';` next to `TOUCHPOINT_KEY` (`index.html:468`). Insert `{ key: 'follow-up', label: 'Follow-ups' }` into `SLICES` right after `touchpoint`.
+2. **Category model**: `newCategory()` (`index.html:514`) gains `followups: []`; add `normalizeCategoryFollowups(cat)` (ensure array + `{id,name}` shape — no legacy resolution needed) called next to `migrateCategoryTouchpoints` in `load()` and `importDatabase()`.
+3. **Dictionary CRUD** (mirror the touchpoint block ~`index.html:921-971`): `addFollowup` (find-or-create by name), `renameFollowup`, `removeFollowup` (usage count → confirm → cascade over `cells[FOLLOWUP_KEY]`), `moveFollowup`, `followupUsage`; `addFollowupElement(stepId, fuId)` → push `{id: uid(), fuId, text:'', action:''}` + `save()` + `refreshLibCell`; `removeFollowupElement`.
+4. **Cell rendering** — branch in `buildCellElements` (`index.html:2180`) for `FOLLOWUP_KEY` (next to the existing `isTp` branch): row `[⠿][chip][text][action][×]` — chip = non-interactive span styled with `--chip`/`--chip-text` showing `fuName(el.fuId)`; text span dblclick → `startElementEdit(text, step.id, slice, el.id, el.text, 'text')`; action span (prefixed "→ ", `var(--text-3)`) dblclick → same with `'action'`; drag-reorder + × as elsewhere; "+ follow-up" → picker. Extend `startElementEdit` (`index.html:1372`) with a 6th param `field = 'text'` writing `el[field]` — default keeps every existing caller unchanged.
+5. **Generalize picker/manager into a dictionary factory**: parameterize `openTpPicker(anchor, step, cfg)` (`index.html:1412`) and `openTouchpointManager(cfg)` (`index.html:1525`) over a cfg `{ key, itemLabel, managerTitle, items(), usage(), add(), rename(), remove(), move(), export(), import(), addEl(), removeEl() }`. Touchpoint call sites pass `TP_CFG` (behavior identical — regression surface), follow-ups pass `FU_CFG`. `refreshTpCell` → `refreshLibCell(key, stepId)`; cell class hook: add `fu-cell` next to `tp-cell` (`index.html:2143`). Reuse the existing `.tp-*` CSS for both.
+6. **Follow-ups picker behavior**: single-add — channel click → `addFollowupElement` → `closeTpPicker()` → after `refreshLibCell`, focus the new element's text (open inline edit immediately). Keep "＋ New…" and "⚙ Manage list…" rows.
+7. **JSON IO — followups**: `exportFollowups()` / `importFollowups(data)` per the contract (mirror the touchpoint pair). Detection in `importFromFile` (`index.html:2666`) — order: database → personas → themes → touchpoints → **followups** (`data.kind === 'followups' || Array.isArray(data.followups)`) → journey → invalid.
+8. **JSON IO — touchpoint fixes (folded)**: define `exportTouchpoints()` (kind `'touchpoints'`, file `touchpoints-<category>.json`, items as names — call site already at `index.html:1555`) and `importTouchpoints(data)` (Change 10 #9 tolerance incl. the bare-string-array claim); add the touchpoints branch to `importFromFile` (`data.kind === 'touchpoints' || Array.isArray(data.touchpoints) || bare string array`).
+9. **Journey export/import** (`exportJourney` `index.html:2511` / `importJourney`): payload gains `touchpoints: [{name}]` and `followups: [{name}]` (unique, first-use order); import resolves both by name (find-or-create in the target category), sets `tpId`/`fuId` and refreshes the touchpoint `el.text` snapshot.
+10. **Database export/import** (`exportDatabase` `index.html:2499` / `importDatabase` `index.html:2598`): dictionaries ride along in the deep-cloned categories; on import, regen `touchpoints`/`followups` item ids into `tpMap`/`fuMap` and remap every element's `tpId`/`fuId` in the existing walk (next to the persona/theme remaps) — also bump `state.nextId` past all surviving ids.
+11. **Display compose** — extend `elementText(el, key)` (`index.html:541`): `key === FOLLOWUP_KEY` → `` `${fuName(el.fuId) ?? '—'}${el.text ? ' · ' + el.text : ''}${el.action ? ' → ' + el.action : ''}` ``. Used by `cellAriaLabel` and the `exportPng` element loop (one wrapped line per element).
+12. **CSS** (tokens only): `.fu-chip` (chip look via `--chip`/`--chip-text`), `.fu-action` (arrow prefix, `--text-3`); everything else reuses `.tp-*`.
+13. **Regression check**: touchpoints behave exactly as after Change 12 (picker multi-add, ⚙ manager, rename propagation) — the factory must not change semantics, only parametrize; other slices' inline editing untouched (`field` param defaults to `'text'`); PNG/aria of the 10 existing rows unchanged; journey/database round-trip preserves follow-ups and touchpoint links.
+
 **User goal**
 Tidy up the journey rows: Touchpoints, Emotions, Pain points, Ideas and Screenshots must stay (and Actions — confirmed in the interview). Mindset and Insights felt like the same row — merged into **Insights**, understood as **the persona's first impression of the step** (`"pierwsze wrażenie osoby"`), placed **before Emotions and Pain points**. Three rows added: **Backstage** (what the bank/team does behind the scenes), **Duration** (customer-perceived time, e.g. "2 days waiting"), **Metrics** (KPI per step).
 
