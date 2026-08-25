@@ -789,3 +789,35 @@ Hide journey rows (slices) the audience doesn't need — e.g. drop Backstage, Du
 7. **JSON round-trips**: nothing to add — `buildJourneyPayload` (`index.html:2731`) deep-clones the journey (field included); `normalizeJourneyHidden` in `normalizeJourney` sanitizes imports; database import goes through the same normalize. The AI-prompt contract needs no text change (unknown fields are already tolerated; a chat dropping `hiddenSlices` is the documented accepted behavior).
 8. **CSS** (tokens only): `.g-slice-label .slice-hide` (copy the `.slice-manage` rules, `index.html:347-349`; keep `margin-left: auto` on the FIRST of the two hover buttons so the pair right-aligns — gear keeps auto, eye sits after it), `.rows-chip` (small ghost button in the corner, `--chip`/`--chip-text`, hover → `--accent`), `.rows-pop` (reuse `.tp-picker` look). A11y: real buttons with `aria-label`s, visible `:focus-visible`, popover keyboard-operable.
 9. **Regression check**: hide → row gone, unhide via popover → content intact verbatim; PNG with nothing hidden = pixel-identical layout to today; touchpoint/follow-up ⚙ still reachable beside 👁; picker (`_tpPicker`) and rows popover both close on grid re-render; journey export → import preserves visibility; database export → import preserves it; old localStorage/backups load with all rows visible; both app themes + brand themes unaffected (visibility doesn't touch theming).
+
+### Change 17 — feature: screenshots always full column width — no height cap (2026-08-25)
+**Status**: planned — route to ux-build
+
+**User goal**
+Screenshots always fill 100% of the step column width; the Screenshots row (and its PNG-export band) is exactly as tall as the tallest screenshot. Every screenshot starts at the top-left of the row; shorter ones take less space and leave empty space below. Supersedes Change 11's deliberate caps ("Portrait/very tall screenshots get a max-height cap (letterboxed, still no crop)" — grid 440px, PNG 360px).
+
+**MVP scope**
+- **Grid**: remove the `.shot-thumb` height cap — full column width, natural height from the stored aspect ratio; the row auto-sizes to the tallest cell (already a top-aligned flex column).
+- **PNG export**: remove the `maxH` cap from `shotDrawPlan` — images drawn at full available width, natural height, left-aligned (the horizontal centering becomes dead code); band height = tallest column's stack (existing mechanism).
+- **Canvas guard**: when the computed export size would exceed a safe ceiling (~30,000px vs the ~32,767px browser canvas limit), scale the whole canvas down proportionally (one factor at canvas sizing + `ctx.scale`; drawing code untouched).
+
+**Later (deferred)**
+- Per-journey screenshot scale toggle (e.g. 50%) as a relief valve for extreme full-page captures.
+- Screenshot captions + drag-reorder of thumbnails in a cell (still Change 7/11 Later).
+
+**Impact**
+- **Data**: none — `w`/`h` already stored per shot; IndexedDB blobs untouched. **No key version bump.**
+- **Actions**: none.
+- **Screens**: no new surfaces — Screenshots slice row only (grid CSS + `exportPng`).
+- **States**: no new states — an extremely tall row is just scrollable content.
+- **Interactions**: none new; lightbox, add/paste/drag-drop/remove unchanged.
+- **Edge cases**: full-page capture (e.g. 390×8440) → row/band several thousand px tall — accepted by design, the PNG guard covers the canvas limit; missing `w`/`h` → existing fallbacks (grid `4/3` aspect-ratio, PNG `1/1`); missing blob → dashed placeholder at the planned uncapped size; empty cell → `+` add-bar + `min-height: 56px` unchanged; many-step journeys → the same `fit` guard covers total width.
+- **Glossary**: none new.
+
+**Build instructions for ux-build**
+1. **Grid CSS** — `.shot-thumb` (`index.html:286-291`): delete `max-height: 440px;`. Keep `width: 100%; height: auto;`, the inline `aspect-ratio` (reserves height before the blob loads — no layout jump) and `object-fit: contain` (now an exact fill). Update the section comment (`index.html:284`) to "stacked, full cell width, natural height, no cap".
+2. **shotDrawPlan** (`index.html:2629-2641`): drop the `maxH` param and the clamping branch (`if (dh > maxH) …`) — every place is `{ dw: availW, dh: h * (availW / w) }`. Update both call sites (`index.html:2683` and `2761`) to the 2-arg form.
+3. **Draw loop** (`index.html:2763-2777`): `const dx = x1 + 8 + (availW - dw) / 2` → `const dx = x1 + 8` (flush left; the offset is now always 0).
+4. **Canvas guard** (`index.html:2700-2705`): after `totalW`/`totalH`, `const fit = Math.min(1, 30000 / totalW, 30000 / totalH);` then `canvas.width = totalW * dpr * fit; canvas.height = totalH * dpr * fit;` and `ctx.scale(dpr * fit, dpr * fit)` (replaces `ctx.scale(dpr, dpr)`). All drawing stays in logical coordinates; the `style.width/height` lines stay as they are.
+5. **Spec impact**: supersedes Change 11's cap decisions (grid "max-height cap (letterboxed…)", PNG "single-image height cap ~360px") — on conflict ux-build follows Change 17.
+6. **Regression check**: portrait shot > 440px tall renders full column width (no side gaps, no letterbox); short shot beside a tall one → flush top-left, empty space below; PNG band = tallest column, images flush left; journey with only short shots → PNG pixel-identical to today (`fit = 1`, `dw = availW` as before); screenshots CRUD + paste + drop + lightbox unchanged; both themes render the taller row correctly.
