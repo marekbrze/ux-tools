@@ -791,7 +791,7 @@ Hide journey rows (slices) the audience doesn't need — e.g. drop Backstage, Du
 9. **Regression check**: hide → row gone, unhide via popover → content intact verbatim; PNG with nothing hidden = pixel-identical layout to today; touchpoint/follow-up ⚙ still reachable beside 👁; picker (`_tpPicker`) and rows popover both close on grid re-render; journey export → import preserves visibility; database export → import preserves it; old localStorage/backups load with all rows visible; both app themes + brand themes unaffected (visibility doesn't touch theming).
 
 ### Change 17 — feature: screenshots always full column width — no height cap (2026-08-25)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (node syntax check; both `shotDrawPlan` call sites on the 2-arg form; no `max-height: 440` / `360` cap / centering-offset remnants); click-test pending
 
 **User goal**
 Screenshots always fill 100% of the step column width; the Screenshots row (and its PNG-export band) is exactly as tall as the tallest screenshot. Every screenshot starts at the top-left of the row; shorter ones take less space and leave empty space below. Supersedes Change 11's deliberate caps ("Portrait/very tall screenshots get a max-height cap (letterboxed, still no crop)" — grid 440px, PNG 360px).

@@ -281,10 +281,10 @@
   /* storage error toast */
   #storage-error { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; padding: 10px 16px; font-size: 12px; z-index: 9999; max-width: 90vw; text-align: center; }
 
-  /* ── Screenshots row (stacked, full cell width, no cropping) ── */
+  /* ── Screenshots row (stacked, full cell width, natural height — no cap, Change 17) ── */
   .g-cell .shots { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: stretch; }
   .shot-thumb {
-    position: relative; width: 100%; height: auto; max-height: 440px; padding: 0;
+    position: relative; width: 100%; height: auto; padding: 0;
     border: 1px solid var(--element-border); border-radius: 4px; overflow: hidden;
     background: var(--element-bg); cursor: zoom-in;
   }
@@ -2626,15 +2626,13 @@ function exportPalette() {
 }
 
 // layout plan for a stack of full-column-width screenshots (no bitmaps needed — uses metadata)
-function shotDrawPlan(shots, availW, maxH) {
+function shotDrawPlan(shots, availW) {
   const n = shots.length;
   if (!n) return null;
   const gap = 8;
   const places = shots.map(s => {
     const w = s.w || 1, h = s.h || 1;
-    let dw = availW, dh = h * (availW / w);
-    if (dh > maxH) { dh = maxH; dw = w * (maxH / h); }
-    return { dw: Math.round(dw), dh: Math.round(dh) };
+    return { dw: Math.round(availW), dh: Math.round(h * (availW / w)) };
   });
   const contentH = Math.max(12, places.reduce((a, p) => a + p.dh, 0) + gap * (n - 1));
   return { gap, places, contentH };
@@ -2680,7 +2678,7 @@ async function exportPng() {
     if (slice.key === SCREENSHOT_KEY) {
       let maxH = 0, any = false;
       flat.forEach(f => {
-        const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16, 360);
+        const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16);
         if (plan) { any = true; maxH = Math.max(maxH, plan.contentH); }
       });
       return { slice, h: any ? maxH + 14 : 34 };
@@ -2700,9 +2698,10 @@ async function exportPng() {
   const totalW = pad * 2 + labelW + colW * flat.length;
   const totalH = pad * 2 + headerH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h, 0);
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = totalW * dpr; canvas.height = totalH * dpr;
+  const fit = Math.min(1, 30000 / totalW, 30000 / totalH); // canvas safety: browsers cap ~32,767px (Change 17)
+  canvas.width = totalW * dpr * fit; canvas.height = totalH * dpr * fit;
   canvas.style.width = totalW + 'px'; canvas.style.height = totalH + 'px';
-  ctx.scale(dpr, dpr);
+  ctx.scale(dpr * fit, dpr * fit);
   ctx.font = font;
 
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, totalW, totalH);
@@ -2758,11 +2757,11 @@ async function exportPng() {
         if (shots.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
         else {
           const availW = colW - 16;
-          const plan = shotDrawPlan(shots, availW, 360);
+          const plan = shotDrawPlan(shots, availW);
           let dy = y + 7;
           shots.forEach((s, k) => {
             const { dw, dh } = plan.places[k];
-            const dx = x1 + 8 + (availW - dw) / 2;
+            const dx = x1 + 8;
             const bm = shotBmps.get(s.id);
             if (bm) { try { ctx.drawImage(bm, dx, dy, dw, dh); } catch (err) { /* skip */ } }
             else {
