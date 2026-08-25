@@ -746,3 +746,46 @@ Generate and expand customer journeys **in an AI chat** and import the result st
 5. **`copyText(text, btn)`**: `navigator.clipboard.writeText(text)` in try/catch → on success swap the button label to "✓ Copied" for ~1.5 s then restore; on failure "✗ Failed" (keep the textarea selectable — manual Ctrl+C is the documented fallback).
 6. **CSS** (tokens only): `.ap-tabs` (ghost buttons + selected state on `--accent`), `.ap-prompt` (mono, `--inset` bg, `--border`, focus-visible ring), button row gap. Both themes AA as today.
 7. **Regression check**: `exportJourney` still downloads a file WITH images (byte-comparable payload keys); import chain untouched (the prompt only teaches today's format); header layout with the extra button; modal focus/Escape behavior; clipboard feedback timer doesn't leak between clicks (clear the previous timer).
+
+### Change 16 — feature: per-journey row visibility (hide/show slices) (2026-08-25)
+**Status**: planned — route to ux-build
+
+**User goal**
+Hide journey rows (slices) the audience doesn't need — e.g. drop Backstage, Duration and Metrics for a stakeholder presentation — and have the map (and the **PNG export**) show only what's visible. Rows are hidden per journey; hiding is **pure presentation** — elements are never deleted.
+
+**Interview decisions (2026-08-25)**
+- **Purpose = cleaner presentation**: hidden rows disappear from the grid **and from the PNG export** (not an editing-focus tool).
+- **Per journey**: each journey remembers its own hidden rows; exports match the journey.
+- **UI**: 👁 hover button on every row label to hide it + a corner chip `👁 N` (top-left of the grid, only when something is hidden) opening a checkbox popover of all rows to bring them back.
+- Realizes the "per-journey row visibility" deferred in Change 13's Later (reorder stays deferred).
+
+**MVP scope**
+- `journey.hiddenSlices` (array of slice keys, `[]` = all visible) — persisted, normalized, carried by journey/database JSON.
+- 👁 on each slice label (hover-reveal, next to the existing ⚙ on Touchpoints/Follow-ups) → hides that row.
+- Corner chip `👁 N` in the grid's top-left corner when any rows are hidden → popover: checkbox list of all 11 rows (checked = visible) + "Show all" link. Live re-render on every toggle.
+- PNG export draws only visible rows (hidden row = its whole band gone, height recomputed).
+
+**Later (deferred)**
+- Manual row **reordering** (Change 13 Later — stays deferred).
+- Visibility presets ("presentation set" / "working set" — one-click profiles).
+- Hiding **columns** (steps) — only rows were asked for.
+
+**Impact**
+- **Data**: + `journey.hiddenSlices: string[]` on the journey object (localStorage — tiny, no blobs). **No key version bump** — additive backfill in `load()`'s walk and `normalizeJourney()`; normalization filters out keys not in `SLICES`. `buildJourneyPayload` deep-clones the journey → the field rides along automatically into journey exports, the AI-prompt JSON and database export; importers normalize it (missing field → `[]`, unknown keys dropped).
+- **Actions**: `visibleSlices(j)` (helper), `toggleSliceHidden(key)` (add/remove key → `save()` + `renderGrid()`), `openRowsPopover(anchor)` / `closeRowsPopover()` (picker teardown pattern).
+- **Screens**: 👁 on slice labels; corner chip in the stage-row corner cell (`g-corner`, today empty); rows popover (dropdown on the `.tp-picker` mechanics). No sidebar/header changes.
+- **States**: chip hidden when nothing is hidden; popover shows all rows with live check states; all-rows-hidden → grid shows just the stage + step rows, chip still present (`👁 11`) and functional.
+- **Interactions**: hover-reveal eye (button + `aria-label`); popover keyboard-operable (rows focusable, Enter/Space toggles, Escape closes) with click-outside close, torn down on grid re-render like `_tpPicker`.
+- **Edge cases**: hidden row keeps its elements — unhiding restores content verbatim; old data/backups without `hiddenSlices` → all visible; a stored key not matching any slice (future renames) → dropped on normalize; AI chat dropping the field in an expand round-trip → imported copy shows all rows (accepted — presentation state, no data loss); journey with 0 steps → grid already returns early, no chip (nothing to show).
+- **Glossary**: `row visibility` (`row-visibility`), `hidden slices` (`hidden-slices` — `journey.hiddenSlices`), `rows chip` (`rows-chip`), `rows popover` (`rows-popover`).
+
+**Build instructions for ux-build**
+1. **Model**: `newJourney()` (`index.html:531`) gains `hiddenSlices: []`. Helper `normalizeJourneyHidden(j)`: not an array → `[]`; else filter to keys present in `SLICES` and dedupe. Call in `load()`'s walk next to the `brandThemeId` line (`index.html:723`) and in `normalizeJourney()` (`index.html:2987`, next to `brandThemeId`) — the latter covers `importJourney` + `importDatabase`.
+2. **Helper + action**: `visibleSlices(j)` → `SLICES.filter(s => !(j?.hiddenSlices || []).includes(s.key))`. `toggleSliceHidden(key)`: toggle the key in `currentJourney().hiddenSlices`, `save()`, `renderGrid()` (chip count + rows update; no full `render()`).
+3. **renderGrid rows** (`index.html:2315`): iterate `visibleSlices(j)` instead of `SLICES`, with a **visible-index counter** for the grid row number (`SLICE_BASE + visIdx`) — `sIdx` no longer matches row numbers. In the slice-label construction append a 👁 button on every row (class `slice-hide`, styled exactly like `.slice-manage` hover-reveal — after the optional ⚙ so TP/FU labels read `[label][⚙][👁]`), `aria-label`/`title` = `Hide {slice.label} row`, click → `toggleSliceHidden(slice.key)`.
+4. **Corner chip** — in the row-1 corner construction (`index.html:2211-2215`, `corner1` is an empty `role="presentation"` cell): when `j.hiddenSlices.length > 0`, append inside it a `<button class="rows-chip">` with text `👁 {n}` (`aria-label`/`title` = `Show hidden rows ({n} hidden)`) → `openRowsPopover(btn, j)`. Corner stays presentation-only when nothing is hidden. `corner2` ("Step") untouched.
+5. **Popover** — mirror the `_tpPicker` mechanics (`index.html:1542-1550`, `1714`): a module-level `_rowsPop` handle (element + keydown/click-outside listeners) torn down by a `closeRowsPopover()` called at the top of `renderGrid()` (next to `closeTpPicker()`, `index.html:2191`). Content: one checkbox row per `SLICES` entry (label from `slice.label`, checked = `!hidden`), change → `toggleSliceHidden(key)` and rebuild the popover's check states; a "Show all" row (button) when any row is hidden → `j.hiddenSlices = []`, `save()`, `renderGrid()`. Anchored under the corner like the touchpoint picker; Escape/click-outside close.
+6. **PNG export** (`index.html:2555`): `const sliceRows = visibleSlices(j).map(...)` — hidden rows are neither measured nor drawn; a hidden Screenshots row removes its band entirely. No other export changes.
+7. **JSON round-trips**: nothing to add — `buildJourneyPayload` (`index.html:2731`) deep-clones the journey (field included); `normalizeJourneyHidden` in `normalizeJourney` sanitizes imports; database import goes through the same normalize. The AI-prompt contract needs no text change (unknown fields are already tolerated; a chat dropping `hiddenSlices` is the documented accepted behavior).
+8. **CSS** (tokens only): `.g-slice-label .slice-hide` (copy the `.slice-manage` rules, `index.html:347-349`; keep `margin-left: auto` on the FIRST of the two hover buttons so the pair right-aligns — gear keeps auto, eye sits after it), `.rows-chip` (small ghost button in the corner, `--chip`/`--chip-text`, hover → `--accent`), `.rows-pop` (reuse `.tp-picker` look). A11y: real buttons with `aria-label`s, visible `:focus-visible`, popover keyboard-operable.
+9. **Regression check**: hide → row gone, unhide via popover → content intact verbatim; PNG with nothing hidden = pixel-identical layout to today; touchpoint/follow-up ⚙ still reachable beside 👁; picker (`_tpPicker`) and rows popover both close on grid re-render; journey export → import preserves visibility; database export → import preserves it; old localStorage/backups load with all rows visible; both app themes + brand themes unaffected (visibility doesn't touch theming).
