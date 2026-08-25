@@ -331,6 +331,17 @@
   .persona-card .pc-list.pc-goals li::before { color: var(--accent-soft-text); }
   .persona-card .pc-list.pc-frustrations li::before { color: var(--danger); }
   .persona-card .pc-empty { font-size: 12px; color: var(--text-4); font-style: italic; margin-top: 12px; }
+  .ai-prompt-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); width: min(720px, 92vw); max-height: 85vh; display: flex; flex-direction: column; padding: 18px 20px 16px; position: relative; }
+  .ai-prompt-card .ap-close { position: absolute; top: 10px; right: 12px; width: 26px; height: 26px; border-radius: 5px; font-size: 15px; color: var(--text-3); cursor: pointer; }
+  .ai-prompt-card .ap-close:hover { color: var(--danger); background: var(--danger-soft); }
+  .ai-prompt-card h2 { font-size: 15px; font-weight: 600; color: var(--text); margin-right: 28px; }
+  .ai-prompt-card .ap-tabs { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .ai-prompt-card .ap-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .ai-prompt-card .ap-how { font-size: 11.5px; color: var(--text-3); margin-top: 10px; line-height: 1.4; }
+  .ai-prompt-card .ap-prompt { margin-top: 10px; flex: 1; min-height: 260px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; line-height: 1.5; color: var(--text-2); background: var(--inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; white-space: pre; overflow: auto; }
+  .ai-prompt-card .ap-prompt:focus-visible { outline: 2px solid var(--accent); }
+  .ai-prompt-card .ap-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .ai-prompt-card .ap-empty { flex: 1; min-height: 160px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border); border-radius: 8px; color: var(--text-4); font-size: 12px; margin-top: 10px; }
 
   /* ── Touchpoints: slice-label manage + in-cell picker + manager modal ── */
   .g-slice-label .slice-manage { margin-left: auto; opacity: 0; cursor: pointer; font-size: 12px; padding: 1px 4px; border-radius: 3px; color: var(--text-4); flex-shrink: 0; }
@@ -390,6 +401,7 @@
   <span class="hint">Customer journey map · stages / steps × slices</span>
   <span class="spacer"></span>
   <button class="btn btn-ghost btn-sm" id="btn-theme" aria-label="Switch theme" title="Switch theme">☀</button>
+  <button class="btn btn-ghost btn-sm" id="btn-ai-prompt" aria-label="AI prompt" title="Copy a prompt to create or expand a journey with an AI chat">✦ AI prompt</button>
   <button class="btn btn-ghost btn-sm" id="btn-import" aria-label="Import JSON" title="Import JSON (full DB or single journey)">↥ Import</button>
   <button class="btn btn-ghost btn-sm" id="btn-export-json" aria-label="Export whole database as JSON" title="Export whole database as JSON">↧ Export JSON</button>
   <button class="btn btn-primary btn-sm" id="btn-export">↓ Export PNG</button>
@@ -2716,9 +2728,7 @@ async function exportDatabase() {
   downloadJson(data, 'customer-journey-backup-' + dateStamp() + '.json');
   flashToast('✓ Database exported');
 }
-async function exportJourney() {
-  const j = currentJourney(); if (!j) return;
-  const images = await exportImagesForSteps(stepsOfJourney(j, []));
+function buildJourneyPayload(j) {
   let persona = null;
   if (j.personaId != null) {
     const p = state.personas.find(x => x.id === j.personaId);
@@ -2741,11 +2751,226 @@ async function exportJourney() {
       if (t && !fuList.some(x => x.id === t.id)) fuList.push({ id: t.id, name: t.name });
     });
   });
-  const data = { version: 1, kind: 'journey', app: 'customer-journey',
-    journey: JSON.parse(JSON.stringify(j)), persona, theme, images,
+  return { version: 1, kind: 'journey', app: 'customer-journey',
+    journey: JSON.parse(JSON.stringify(j)), persona, theme,
     touchpoints: tpList, followups: fuList };
+}
+
+async function exportJourney() {
+  const j = currentJourney(); if (!j) return;
+  const data = buildJourneyPayload(j);
+  data.images = await exportImagesForSteps(stepsOfJourney(j, []));
   downloadJson(data, safeFilename(j.title) + '.json');
   flashToast('✓ Journey exported');
+}
+
+function journeyJsonForPrompt(j) { return JSON.stringify(buildJourneyPayload(j), null, 2); }
+
+// ─── AI prompt (chat instructions to create / expand journeys as importable JSON) ──
+const AI_PROMPT_CREATE = `You are helping a UX designer build a customer journey map for a banking process. The map will be imported into a journey-mapping tool from a JSON file, so at the very end it MUST follow the JSON contract below exactly.
+
+STEP 1 — Interview me first (do not generate any JSON yet)
+- Ask about 10-20 questions in total, delivered in small rounds of 2-5 questions.
+- Each round builds on what is already settled. Cover, in order: the process and its goal; the persona and their scenario; what the customer expects; process stages and candidate steps; known pain points and existing research; available data (durations, metrics).
+- At any point I may paste research materials (interview notes, transcripts, documents, reports). Mine them for content instead of inventing.
+- If I say "generate now", stop asking and build the map from what you already have.
+
+STEP 2 — Mark assumptions
+Anything in the map that is not grounded in my answers or the pasted materials is an assumption. List the assumptions in your final reply BEFORE the JSON block, one line each.
+
+STEP 3 — Map semantics
+The map is a grid: columns = steps of the process grouped into stages; rows = 11 fixed dimensions. For every step fill:
+- "actions" — what the customer DOES in this step (verb + object, customer's perspective)
+- "touchpoint" — where the customer interacts with the bank in this step (dictionary names, e.g. "Mobile app")
+- "follow-up" — what the bank SENDS to the customer: channel + message + the action it triggers
+- "insight" — the persona's first impression / thoughts in this step (e.g. "How much will it cost me?")
+- "emotion" — ONE integer 1-5 (1 = very negative, 5 = very positive), never a list
+- "pain-point" — the customer's difficulties and frustrations in this step
+- "idea" — improvement opportunities for this step
+- "backstage" — what the bank/team/systems do behind the scenes (bank's perspective)
+- "duration" — customer-perceived time of this step (e.g. "2 days waiting")
+- "metric" — the KPI of this step (e.g. "form completion > 60%")
+- "screenshots" — images; you cannot produce them, keep this list empty
+Writing rules: one thought per element (each list item is independent and short); actions/insights/pain points from the customer's perspective, backstage from the bank's; short concrete phrases, not sentences; a pain point without an idea is a gap — try to pair them.
+
+STEP 4 — The JSON contract (example with one filled step)
+{
+  "version": 1,
+  "kind": "journey",
+  "app": "customer-journey",
+  "persona": { "name": "Anna", "role": "Senior accountant", "description": "...", "goals": ["..."], "needs": ["..."], "frustrations": ["..."], "quote": "..." },
+  "touchpoints": [ { "id": 1, "name": "Mobile app" }, { "id": 2, "name": "E-mail" } ],
+  "followups": [ { "id": 1, "name": "Push" }, { "id": 2, "name": "SMS" } ],
+  "journey": {
+    "title": "Cash loan application",
+    "description": "Scenario: Anna applies for a cash loan entirely in the mobile app.",
+    "expectations": "Quick decision, no hidden costs, minimal paperwork.",
+    "stages": [
+      { "name": "Application", "steps": [
+        { "name": "Fill personal data form", "cells": {
+          "action":      [ { "text": "Fills in the personal data form" } ],
+          "touchpoint": [ { "tpId": 1, "text": "Mobile app" } ],
+          "follow-up":  [ { "fuId": 1, "text": "Application saved - continue anytime", "action": "Customer returns to the app" } ],
+          "insight":    [ { "text": "How much will it cost me?" } ],
+          "emotion":    3,
+          "pain-point": [ { "text": "Doesn't know which documents to prepare" } ],
+          "idea":       [ { "text": "Show the document list up front" } ],
+          "backstage":  [ { "text": "System pre-checks data in external registries" } ],
+          "duration":   [ { "text": "15 min" } ],
+          "metric":     [ { "text": "Form completion > 60%" } ],
+          "screenshots": []
+        } }
+      ] }
+    ]
+  }
+}
+
+Contract notes:
+- All "id" fields are optional — the importing tool regenerates them.
+- Touchpoint elements may use "tpId" (a touchpoints[].id) or just "text" with the name.
+- Follow-up elements must reference a "followups[].id" via "fuId".
+- "emotion" is an integer 1-5 or null.
+- Omit persona fields you don't know; unknown fields are ignored.
+- Do not add an "images" field.
+
+STEP 5 — Output
+Finish your reply with the complete JSON in a single \`\`\`json code block. Nothing after the block. Valid JSON only: no comments, no trailing commas, double quotes.`;
+
+function buildAiPromptExpand() {
+  const j = currentJourney(); if (!j) return null;
+  return `You are helping a UX designer evolve an existing customer journey map stored as JSON. My current journey is at the bottom. I will ask for changes — filling gaps, adding/removing/reordering steps, restructuring stages, enriching row content, proposing ideas.
+
+Rules:
+- Apply my changes and return the COMPLETE updated JSON in the same format — never a diff, never a fragment.
+- Keep the journey title unless I ask to change it.
+- Keep every "screenshots" array exactly as it appears — images cannot travel through this chat.
+- Content not grounded in my input or the original JSON is an assumption — list assumptions before the JSON block, one line each.
+- "emotion" stays a single integer 1-5 (or null); text rows stay lists of short, independent elements; actions/insights/pain points from the customer's perspective, backstage from the bank's.
+- Touchpoint elements may use "tpId" (touchpoints[].id) or "text"; follow-up elements reference "followups[].id" via "fuId". If you introduce a new touchpoint or follow-up channel, add it to the "touchpoints"/"followups" list and reference its id.
+- All other "id" fields are optional; unknown fields are ignored; no comments, no trailing commas; do not add an "images" field.
+
+End every answer that contains a change with the complete JSON in a single \`\`\`json code block. Nothing after the block.
+
+My current journey JSON:
+
+${journeyJsonForPrompt(j)}`;
+}
+
+let _copyTimer = null;
+function copyText(text, btn) {
+  const label = btn.dataset.label || btn.textContent;
+  btn.dataset.label = label;
+  if (_copyTimer) clearTimeout(_copyTimer);
+  _copyTimer = setTimeout(() => { btn.textContent = label; }, 1500);
+  if (!navigator.clipboard || !navigator.clipboard.writeText) { btn.textContent = '✗ Failed'; return; }
+  navigator.clipboard.writeText(text)
+    .then(() => { btn.textContent = '✓ Copied'; })
+    .catch(() => { btn.textContent = '✗ Failed'; });
+}
+
+function openAiPrompt() {
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'AI prompts');
+  const card = document.createElement('div');
+  card.className = 'ai-prompt-card';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'ap-close';
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close AI prompts');
+  closeBtn.title = 'Close (Escape)';
+  card.appendChild(closeBtn);
+
+  const h = document.createElement('h2');
+  h.textContent = 'AI prompts';
+  card.appendChild(h);
+
+  const tabs = document.createElement('div');
+  tabs.className = 'ap-tabs';
+  const tabCreate = document.createElement('button');
+  tabCreate.type = 'button';
+  tabCreate.className = 'btn btn-ghost btn-sm ap-tab';
+  tabCreate.textContent = 'Create from scratch';
+  const tabExpand = document.createElement('button');
+  tabExpand.type = 'button';
+  tabExpand.className = 'btn btn-ghost btn-sm ap-tab';
+  tabExpand.textContent = 'Expand current journey';
+  tabs.appendChild(tabCreate); tabs.appendChild(tabExpand);
+  card.appendChild(tabs);
+
+  const how = document.createElement('div');
+  how.className = 'ap-how';
+  how.textContent = 'How it works: 1 · copy the prompt → 2 · paste it into an AI chat → 3 · save the JSON it returns and import it here with ↥ Import.';
+  card.appendChild(how);
+
+  const body = document.createElement('div');
+  body.style.display = 'flex';
+  body.style.flexDirection = 'column';
+  body.style.flex = '1';
+  body.style.minHeight = '0';
+  card.appendChild(body);
+
+  function renderTab(mode) {
+    while (body.firstChild) body.removeChild(body.firstChild);
+    tabCreate.classList.toggle('active', mode === 'create');
+    tabCreate.setAttribute('aria-pressed', String(mode === 'create'));
+    tabExpand.classList.toggle('active', mode === 'expand');
+    tabExpand.setAttribute('aria-pressed', String(mode === 'expand'));
+    const promptText = mode === 'create' ? AI_PROMPT_CREATE : buildAiPromptExpand();
+    if (promptText == null) {
+      const empty = document.createElement('div');
+      empty.className = 'ap-empty';
+      empty.textContent = 'Open or create a journey first.';
+      body.appendChild(empty);
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.className = 'ap-prompt';
+    ta.readOnly = true;
+    ta.spellcheck = false;
+    ta.setAttribute('aria-label', mode === 'create' ? 'Prompt: create journey from scratch' : 'Prompt: expand current journey');
+    ta.value = promptText;
+    body.appendChild(ta);
+    const actions = document.createElement('div');
+    actions.className = 'ap-actions';
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'btn btn-primary btn-sm';
+    copyBtn.textContent = 'Copy prompt';
+    copyBtn.addEventListener('click', () => copyText(promptText, copyBtn));
+    actions.appendChild(copyBtn);
+    if (mode === 'expand') {
+      const jsonBtn = document.createElement('button');
+      jsonBtn.type = 'button';
+      jsonBtn.className = 'btn btn-ghost btn-sm';
+      jsonBtn.textContent = 'Copy JSON only';
+      jsonBtn.addEventListener('click', () => copyText(journeyJsonForPrompt(currentJourney()), jsonBtn));
+      actions.appendChild(jsonBtn);
+    }
+    body.appendChild(actions);
+  }
+
+  tabCreate.addEventListener('click', () => renderTab('create'));
+  tabExpand.addEventListener('click', () => renderTab('expand'));
+
+  overlay.appendChild(card);
+  function closeIt() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeIt(); } }
+  closeBtn.addEventListener('click', closeIt);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+  document.addEventListener('keydown', onKey, true);
+  document.body.appendChild(overlay);
+  renderTab('create');
+  closeBtn.focus();
 }
 
 function normalizeStep(step, idx) {
@@ -2993,6 +3218,7 @@ const btnImport = document.getElementById('btn-import');
 const importInput = document.getElementById('import-file');
 btnExportJson.addEventListener('click', exportDatabase);
 btnImport.addEventListener('click', () => importInput.click());
+document.getElementById('btn-ai-prompt').addEventListener('click', openAiPrompt);
 importInput.addEventListener('change', () => { importFromFile(importInput.files[0]); importInput.value = ''; });
 document.getElementById('btn-import-personas').addEventListener('click', () => importInput.click());
 document.getElementById('btn-import-themes').addEventListener('click', () => importInput.click());

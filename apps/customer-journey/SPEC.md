@@ -703,7 +703,7 @@ Screenshots must be readable, not just recognizable: in the grid AND in the expo
 7. **Regression check**: lightbox, add (picker/drag&drop/paste), remove + blob cascade, drag-over highlight, JSON export/import, brand themes, emotion row, other slices' inline editing — all untouched; only the Screenshots row's geometry changes (screen + PNG). Verify a journey with 0 shots (band height 34, "—" placeholder), 1 shot, mixed landscape/portrait shots, and a missing blob (placeholder path).
 
 ### Change 15 — feature: AI prompt — copyable chat instructions to create/expand journeys as importable JSON (2026-08-25)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (node --check; all symbols wired; exportJourney refactor keeps `images` in the downloaded file); click-test pending
 
 **User goal**
 Generate and expand customer journeys **in an AI chat** and import the result straight into the tool: a copyable prompt that (a) explains the journey JSON contract so a chat can **draft a new CJ from scratch** — interviewing the user first, in the spirit of Matt Pocock's grill-me / grill-with-docs skills — and (b) ships the **current journey's JSON** so the chat can **expand an existing map**, with the answer importable via the existing ↥ Import.
