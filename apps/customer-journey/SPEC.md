@@ -748,7 +748,7 @@ Generate and expand customer journeys **in an AI chat** and import the result st
 7. **Regression check**: `exportJourney` still downloads a file WITH images (byte-comparable payload keys); import chain untouched (the prompt only teaches today's format); header layout with the extra button; modal focus/Escape behavior; clipboard feedback timer doesn't leak between clicks (clear the previous timer).
 
 ### Change 16 — feature: per-journey row visibility (hide/show slices) (2026-08-25)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (syntax, call sites, no stale refs); click-test pending
 
 **User goal**
 Hide journey rows (slices) the audience doesn't need — e.g. drop Backstage, Duration and Metrics for a stakeholder presentation — and have the map (and the **PNG export**) show only what's visible. Rows are hidden per journey; hiding is **pure presentation** — elements are never deleted.

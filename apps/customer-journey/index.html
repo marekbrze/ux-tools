@@ -347,6 +347,18 @@
   .g-slice-label .slice-manage { margin-left: auto; opacity: 0; cursor: pointer; font-size: 12px; padding: 1px 4px; border-radius: 3px; color: var(--text-4); flex-shrink: 0; }
   .g-slice-label:hover .slice-manage, .g-slice-label .slice-manage:focus-visible { opacity: 1; }
   .g-slice-label .slice-manage:hover { color: var(--text-2); background: var(--panel-3); }
+  /* Row visibility (Change 16): eye on the label, corner chip, rows popover */
+  .g-slice-label .slice-hide { margin-left: auto; opacity: 0; cursor: pointer; font-size: 12px; padding: 1px 4px; border-radius: 3px; color: var(--text-4); flex-shrink: 0; }
+  .g-slice-label .slice-manage + .slice-hide { margin-left: 0; } /* gear already right-aligns the pair */
+  .g-slice-label:hover .slice-hide, .g-slice-label .slice-hide:focus-visible { opacity: 1; }
+  .g-slice-label .slice-hide:hover { color: var(--text-2); background: var(--panel-3); }
+  .g-corner.rows-corner { display: flex; align-items: center; padding: 0 8px; }
+  .rows-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 8px; background: var(--chip); color: var(--chip-text); cursor: pointer; }
+  .rows-chip:hover { background: var(--accent-soft); color: var(--accent-soft-text); }
+  .rows-pop .rp-row { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; padding: 5px 8px; border-radius: 5px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+  .rows-pop .rp-row:hover { background: var(--cell-hover); color: var(--text); }
+  .rows-pop .rp-row input { accent-color: var(--accent); margin: 0; flex-shrink: 0; }
+  .rows-pop .rp-show-all { color: var(--accent-soft-text); border-top: 1px solid var(--border-soft); margin-top: 4px; }
 
   .tp-picker { position: fixed; z-index: 9000; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); min-width: 190px; max-width: 280px; max-height: 280px; overflow-y: auto; padding: 4px; }
   .tp-picker::-webkit-scrollbar { width: 6px; }
@@ -529,7 +541,20 @@ function freshCells() {
 function newStep(name) { return { id: uid(), name, cells: freshCells() }; }
 function newStage(name) { return { id: uid(), name, steps: [newStep('Step 1')] }; }
 function newJourney(title, personaId) {
-  return { id: uid(), personaId: personaId ?? null, brandThemeId: null, title, description: '', expectations: '', stages: [newStage('Stage 1')] };
+  return { id: uid(), personaId: personaId ?? null, brandThemeId: null, hiddenSlices: [], title, description: '', expectations: '', stages: [newStage('Stage 1')] };
+}
+// Row visibility (Change 16): hiddenSlices holds slice keys hidden in this journey —
+// pure presentation, elements are never deleted. Unknown keys dropped, dupes removed.
+function normalizeJourneyHidden(j) {
+  if (!Array.isArray(j.hiddenSlices)) { j.hiddenSlices = []; return; }
+  j.hiddenSlices = [...new Set(j.hiddenSlices)].filter(k => SLICES.some(s => s.key === k));
+}
+function visibleSlices(j) { return SLICES.filter(s => !(j?.hiddenSlices || []).includes(s.key)); }
+function toggleSliceHidden(key) {
+  const j = currentJourney(); if (!j) return;
+  const i = j.hiddenSlices.indexOf(key);
+  if (i >= 0) j.hiddenSlices.splice(i, 1); else j.hiddenSlices.push(key);
+  save(); renderGrid();
 }
 function newCategory(name) { return { id: uid(), name, journeys: [], touchpoints: [], followups: [] }; }
 function newTouchpointItem(name) { return { id: uid(), name }; }
@@ -721,6 +746,7 @@ function load() {
     // normalize any missing cells/slices on loaded data
     state.categories.forEach(cat => cat.journeys.forEach(j => {
       if (j.brandThemeId == null) j.brandThemeId = null;
+      normalizeJourneyHidden(j);
       j.stages.forEach(st => st.steps.forEach(step => {
         const c = step.cells || (step.cells = {});
         mergeMindsetIntoInsights(step);
@@ -1550,6 +1576,84 @@ function closeTpPicker() {
   _tpPicker = null;
 }
 
+// ─── Rows visibility popover (Change 16) ──────────────────────────────────────
+// Body-level like the tp-picker, but it SURVIVES grid re-renders: its anchor is
+// the grid corner, which never moves — so checkbox toggles re-render the grid
+// underneath while the popover keeps focus. syncRowsPopover() (called from
+// renderGrid) closes it when the journey changes or nothing is hidden anymore.
+let _rowsPop = null;   // live rows popover { el, onKey, onDoc, journeyId, rows }
+
+function closeRowsPopover() {
+  if (!_rowsPop) return;
+  _rowsPop.el.remove();
+  document.removeEventListener('keydown', _rowsPop.onKey, true);
+  document.removeEventListener('mousedown', _rowsPop.onDoc, true);
+  _rowsPop = null;
+}
+
+function syncRowsPopover() {
+  if (!_rowsPop) return;
+  const j = currentJourney();
+  if (!j || _rowsPop.journeyId !== j.id || j.hiddenSlices.length === 0) { closeRowsPopover(); return; }
+  _rowsPop.rows.forEach(r => { r.input.checked = !j.hiddenSlices.includes(r.key); });
+}
+
+function openRowsPopover(anchor) {
+  closeRowsPopover();
+  const j = currentJourney(); if (!j) return;
+  const pop = document.createElement('div');
+  pop.className = 'tp-picker rows-pop';
+  pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-label', 'Rows visibility');
+  document.body.appendChild(pop);
+  const rect = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth || 200;
+  pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)) + 'px';
+  pop.style.top = Math.min(rect.bottom + 4, window.innerHeight - 60) + 'px';
+
+  const rows = [];
+  SLICES.forEach(slice => {
+    const row = document.createElement('label');
+    row.className = 'rp-row';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = !j.hiddenSlices.includes(slice.key);
+    input.setAttribute('aria-label', `Show ${slice.label} row`);
+    const nm = document.createElement('span'); nm.textContent = slice.label;
+    row.appendChild(input); row.appendChild(nm);
+    input.addEventListener('change', ev => { ev.stopPropagation(); toggleSliceHidden(slice.key); });
+    pop.appendChild(row);
+    rows.push({ key: slice.key, input });
+  });
+  const showAll = document.createElement('button');
+  showAll.type = 'button';
+  showAll.className = 'tp-extra rp-show-all';
+  showAll.textContent = 'Show all rows';
+  showAll.addEventListener('click', ev => {
+    ev.stopPropagation();
+    j.hiddenSlices = [];
+    save(); renderGrid(); // syncRowsPopover closes the popover — nothing hidden anymore
+  });
+  pop.appendChild(showAll);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeRowsPopover(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const els = Array.from(pop.querySelectorAll('.rp-row input'));
+    els.push(showAll);
+    if (els.length === 0) return;
+    e.preventDefault();
+    const idx = els.indexOf(document.activeElement);
+    const next = e.key === 'ArrowDown' ? (idx + 1) % els.length : (idx - 1 + els.length) % els.length;
+    els[idx >= 0 ? next : 0].focus();
+  }
+  function onDoc(e) { if (!pop.contains(e.target)) closeRowsPopover(); }
+  document.addEventListener('keydown', onKey, true);
+  document.addEventListener('mousedown', onDoc, true);
+
+  _rowsPop = { el: pop, onKey, onDoc, journeyId: j.id, rows };
+}
+
 // Rebuild a single Touchpoints cell in place (the picker survives — multi-add)
 function refreshTpCell(stepId) {
   const r = findStep(stepId); if (!r) return;
@@ -2189,6 +2293,7 @@ function rowWrap() {
 function renderGrid() {
   applyBrandThemeToGrid();
   closeTpPicker(); // a full grid rebuild invalidates the picker's anchor/step
+  syncRowsPopover(); // keep/close the rows popover across re-renders (Change 16)
   const j = currentJourney();
   gridEl.innerHTML = '';
   if (!j) return;
@@ -2211,6 +2316,17 @@ function renderGrid() {
   const corner1 = document.createElement('div');
   corner1.className = 'g-corner';
   corner1.setAttribute('role', 'presentation');
+  if (j.hiddenSlices.length > 0) {
+    corner1.classList.add('rows-corner');
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'rows-chip';
+    chip.textContent = `👁 ${j.hiddenSlices.length}`;
+    chip.setAttribute('aria-label', `Rows visibility — ${j.hiddenSlices.length} hidden`);
+    chip.title = 'Show / hide rows';
+    chip.addEventListener('click', e => { e.stopPropagation(); openRowsPopover(chip); });
+    corner1.appendChild(chip);
+  }
   place(corner1, STAGE_ROW, 1);
   r1.appendChild(corner1);
 
@@ -2311,9 +2427,9 @@ function renderGrid() {
   });
   gridEl.appendChild(r2);
 
-  // Rows 3..: slices
-  SLICES.forEach((slice, sIdx) => {
-    const row = SLICE_BASE + sIdx;
+  // Rows 3..: slices — only the visible ones (row visibility, Change 16)
+  visibleSlices(j).forEach((slice, vIdx) => {
+    const row = SLICE_BASE + vIdx;
     const rs = rowWrap();
 
     const label = document.createElement('div');
@@ -2331,6 +2447,14 @@ function renderGrid() {
       gear.addEventListener('click', ev => { ev.stopPropagation(); openLibManager(isTpGear ? TP_CFG : FU_CFG); });
       label.appendChild(gear);
     }
+    const hideBtn = document.createElement('button');
+    hideBtn.type = 'button';
+    hideBtn.className = 'slice-hide';
+    hideBtn.textContent = '👁';
+    hideBtn.setAttribute('aria-label', `Hide ${slice.label} row`);
+    hideBtn.title = `Hide ${slice.label} row`;
+    hideBtn.addEventListener('click', ev => { ev.stopPropagation(); toggleSliceHidden(slice.key); });
+    label.appendChild(hideBtn);
     place(label, row, 1);
     rs.appendChild(label);
 
@@ -2552,7 +2676,7 @@ async function exportPng() {
     return lines;
   }
 
-  const sliceRows = SLICES.map(slice => {
+  const sliceRows = visibleSlices(j).map(slice => {
     if (slice.key === SCREENSHOT_KEY) {
       let maxH = 0, any = false;
       flat.forEach(f => {
@@ -2985,6 +3109,7 @@ function normalizeJourney(j) {
   if (j.description == null) j.description = '';
   if (j.expectations == null) j.expectations = '';
   if (j.brandThemeId == null) j.brandThemeId = null;
+  normalizeJourneyHidden(j);
   if (!Array.isArray(j.stages)) j.stages = [];
   j.stages.forEach((st, si) => {
     if (!st.name) st.name = `Stage ${si + 1}`;
