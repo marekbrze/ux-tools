@@ -870,3 +870,38 @@ The exported map must read like a **poster**, not a dense table: generous spacin
    - **Insight / pain-point cards**: per element, card rect `(x1 + 8, cy, colW - 16, cardH)` — `roundRect(..., cardR)`: fill `C.cell`, 1px stroke `C.border`; inside: opening quote `"` (`bold 18px`, `C.accent`) at `(cardX + cardPad, cardY + cardPad + 13)`, text `C.text` wrapped to `colW - 16 - 2*cardPad - 18` starting at `cardX + cardPad + 18` (indent all lines — hanging quote), first baseline `cardY + cardPad + 13`; next card at `+ cardH + cardGap`. Empty cell → "—". (Canvas `roundRect` with a fallback path helper if `ctx.roundRect` is unavailable.)
    - Plain rows / emotion / screenshots: unchanged logic with the new metrics (screenshots `dy` starts at `y + rowPadY/2`).
 8. **Regression check**: export with a journey covering all row kinds (pills, cards, plain, emotion, screenshots) — no text clipping (heights match drawing), pills don't overlap, cards don't overlap; empty rows show "—"; hidden rows (Change 16) still excluded; brand theme + no brand theme; dark + light app theme; `fit` guard on a very tall journey; on-screen grid pixel-unchanged; JSON export/import untouched.
+
+### Change 19 — feature: horizontal stage separation + flow arrows in the PNG export (2026-08-28)
+**Status**: planned — route to ux-build
+
+**User goal**
+The export's horizontal sections must be visually separated too: a stage's group of steps should have a **break** (background gap) between it and the next stage's group — mirroring the vertical `rowGap` from Change 18. Steps may also be connected with **arrows** showing the journey's flow.
+
+**MVP scope**
+- **`stageGap`** (24px of pure background) inserted **between stage column groups** in the export — in the stage band, the step-header row and every slice row (cells keep their width; only their x positions shift per stage).
+- **Flow arrows** in the step-header row: a small chevron with a panel knockout on every same-stage column boundary (reads as `step1 → step2`, vertical border erased behind the arrow); an **accent arrow** centered in each stage gap (bigger, emphasizes the stage transition).
+- Step names truncate a bit shorter when an arrow follows (`colW - 26`) so nothing collides with the knockout.
+- `totalW` grows by `stageGap * (stages − 1)`; the canvas `fit` guard (Change 17) already covers width.
+
+**Later (deferred)**
+- Arrows in the on-screen grid (export-only for now, same scope note as Change 18).
+- An arrow/chevron on the stage band across the gap (today only in the step-header row).
+- Elbow/curved connectors, arrowheads into the first cell of data rows; configurable gap size.
+
+**Impact**
+- **Data**: **none** — presentation only, all inside `exportPng()`; **no key version bump**.
+- **Actions**: none new; `exportPng()` internals (column x mapping, stage band, step header, `totalW`).
+- **Screens**: no new surfaces — the exported PNG only.
+- **States**: none new.
+- **Interactions**: none new.
+- **Edge cases**: single-stage journey → no gaps, no accent arrows, same-stage chevrons only; 1-step stages adjacent → gaps still drawn (a stage of one column); empty stage (no steps) produces no columns and no gap (gaps counted between stages **present in `flat`**); very many stages → wider canvas, `fit` guard scales down; arrow knockout must not touch step-name pixels (trunc `colW - 26` before the knockout zone, next name starts at the knockout's right edge).
+- **Glossary**: `stage gap` (`stage-gap`), `flow arrow` (`flow-arrow`).
+
+**Build instructions for ux-build**
+1. **Constants** (next to the Change 18 poster metrics): `const stageGap = 24;` + a per-column stage ordinal + accessor: `const stageOrd = []; let so = -1; flat.forEach((f, i) => { if (i === 0 || f.stage !== flat[i - 1].stage) so++; stageOrd[i] = so; }); const stageCount = so + 1; const colX = (col) => x0 + labelW + col * colW + stageOrd[col] * stageGap;` (closure over `x0` — called only during drawing, after `x0` exists).
+2. **`totalW`**: `+ stageGap * Math.max(0, stageCount - 1)`.
+3. **Stage band**: `const x1 = colX(first)` instead of `x0 + labelW + first * colW` (width unchanged — columns of one stage are contiguous).
+4. **Step header**: `const x1 = colX(col)`; name trunc `colW - (col < flat.length - 1 ? 26 : 16)`. After the header loop, an arrows loop over `col < flat.length - 1`: same stage → knockout `fillRect(cx - 8, y + 1, 16, stepHeaderH - 2)` in `C.panel` + `drawArrow(cx, y + stepHeaderH / 2, 8, C.labelText)`; stage change → `drawArrow` centered in the gap with size 10 in `C.accent` (drawn on the background, no knockout).
+5. **`drawArrow(cx, cy, size, color)` helper** (next to `rr()`): shaft `cx - size → cx + size - 6` + a chevron head (tip `cx + size`, wings back 6px), `lineWidth 1.5`, restored to 1 after.
+6. **Slice-row cell loop**: `const x1 = colX(col)` (the only other place column x is computed).
+7. **Regression check**: single-stage journey → export identical to Change 18's layout (no gaps/arrows beyond same-stage chevrons); multi-stage → gaps in every row incl. screenshots band; arrows don't overlap names (long step names truncate); hidden rows/slices, brand themes, `fit` guard, JSON IO untouched.
