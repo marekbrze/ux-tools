@@ -404,6 +404,53 @@
   .tp-manager .tm-row.drag-over-above { border-top: 2px solid var(--accent); }
   .tp-manager .tm-row.drag-over-below { border-bottom: 2px solid var(--accent); }
   .tp-manager .tm-empty { padding: 24px 10px; font-size: 12px; color: var(--text-4); text-align: center; border: 2px dashed var(--border); border-radius: 8px; margin-top: 10px; }
+
+  /* ── Persona editor (Change 21) — built on .persona-card ── */
+  .persona-editor { width: min(520px, 92vw); }
+  .persona-editor .pe-field { margin-top: 12px; }
+  .persona-editor .pe-input, .persona-editor .pe-area {
+    width: 100%; background: var(--inset); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); font: inherit; font-size: 12.5px; padding: 5px 8px; outline: none;
+  }
+  .persona-editor .pe-input:focus, .persona-editor .pe-area:focus { border-color: var(--accent); }
+  .persona-editor .pe-area { resize: vertical; line-height: 1.45; min-height: 52px; }
+  .persona-card .pc-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  /* ── Theme editor (Change 21) ── */
+  .theme-editor { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); width: min(640px, 92vw); max-height: 85vh; display: flex; flex-direction: column; padding: 18px 20px 16px; position: relative; }
+  .theme-editor h2 { font-size: 15px; font-weight: 600; color: var(--text); margin-right: 28px; }
+  .theme-editor .te-sub { font-size: 11px; color: var(--text-4); margin-top: 2px; }
+  .theme-editor .te-close { position: absolute; top: 10px; right: 12px; width: 26px; height: 26px; border-radius: 5px; font-size: 15px; color: var(--text-3); cursor: pointer; }
+  .theme-editor .te-close:hover { color: var(--danger); background: var(--danger-soft); }
+  .theme-editor .te-name { margin-top: 12px; width: 100%; background: var(--inset); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 13px; font-weight: 600; padding: 5px 8px; outline: none; }
+  .theme-editor .te-name:focus { border-color: var(--accent); }
+  .theme-editor .te-roles { list-style: none; overflow-y: auto; margin-top: 10px; min-height: 40px; flex: 1; }
+  .theme-editor .te-roles::-webkit-scrollbar { width: 6px; }
+  .theme-editor .te-roles::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+  .te-role-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; }
+  .te-role-row:hover { background: var(--cell-hover); }
+  .te-role-row .te-swatch { width: 32px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: var(--inset); cursor: pointer; flex-shrink: 0; }
+  .te-role-row .te-swatch::-webkit-color-swatch-wrapper { padding: 1px; }
+  .te-role-row .te-swatch::-webkit-color-swatch { border: none; border-radius: 3px; }
+  .te-role-row .te-hex { width: 86px; background: var(--inset); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; padding: 3px 6px; outline: none; flex-shrink: 0; }
+  .te-role-row .te-hex:focus { border-color: var(--accent); }
+  .te-role-row .te-clear { opacity: 0; cursor: pointer; color: var(--text-4); font-size: 12px; padding: 2px 4px; border-radius: 3px; flex-shrink: 0; line-height: 1; }
+  .te-role-row:hover .te-clear, .te-role-row .te-clear:focus-visible { opacity: 1; }
+  .te-role-row .te-clear:hover { color: var(--danger); background: var(--danger-soft); }
+  .te-role-row .te-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .te-role-row .te-meta .te-rl { font-size: 12px; color: var(--text-2); }
+  .te-role-row .te-meta .te-rh { font-size: 10.5px; color: var(--text-4); }
+  .te-preview { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .te-preview .te-pv-title { font-size: 12px; font-weight: 700; padding: 7px 8px 3px; }
+  .te-preview .te-pv-stage { font-size: 11.5px; font-weight: 700; padding: 4px 8px; margin-top: 4px; }
+  .te-preview .te-pv-step { font-size: 11.5px; font-weight: 600; padding: 4px 8px; margin-top: 6px; }
+  .te-preview .te-pv-row { display: flex; align-items: stretch; margin-top: 6px; }
+  .te-preview .te-pv-label { width: 110px; flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 8px; display: flex; align-items: center; }
+  .te-preview .te-pv-cell { flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+  .te-preview .te-pv-text { font-size: 11.5px; }
+  .te-preview .te-pv-pill { font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 8px; }
+  .te-preview .te-pv-hint { font-size: 10px; color: var(--text-4); padding: 4px 8px 6px; }
+  .theme-editor .te-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -444,6 +491,7 @@
       <span style="display:flex; gap:2px; align-items:center;">
         <button class="btn-add" id="btn-import-themes" aria-label="Import themes from JSON" title="Import themes from JSON">↥</button>
         <button class="btn-add" id="btn-export-themes" aria-label="Export themes as JSON" title="Export themes as JSON (for the business repo)">↧</button>
+        <button class="btn-add" id="btn-add-theme" aria-label="New theme" title="New theme">+</button>
       </span>
     </div>
     <ul id="theme-list" class="sb-list"></ul>
@@ -509,6 +557,25 @@ const ROLE_FALLBACK_TOKEN = {
   chipBg: '--chip', chipText: '--chip-text',
 };
 const BRAND_THEME_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+// Friendly role labels (theme editor rows, Change 21). stageText has no token in
+// ROLE_FALLBACK_TOKEN (it maps to the dedicated --cj-stage-text var) — the editor
+// resolves its own fallbacks via ROLE_EDITOR_FALLBACK.
+const THEME_ROLE_META = {
+  bg:         { label: 'Map background',   hint: 'Canvas behind everything' },
+  stageBg:    { label: 'Stage band',       hint: 'Background of stage headers' },
+  stageText:  { label: 'Stage band text',  hint: 'Text on stage bands' },
+  stepBg:     { label: 'Step header',      hint: 'Step name header fill' },
+  labelBg:    { label: 'Row-label column', hint: 'Slice-label column fill' },
+  labelText:  { label: 'Row-label text',   hint: 'Slice labels and "—"' },
+  cellBg:     { label: 'Cell background',  hint: 'Data cell fill' },
+  text:       { label: 'Text',             hint: 'Step names, cell text' },
+  border:     { label: 'Strong borders',   hint: 'Headers, label column' },
+  borderSoft: { label: 'Cell separators',  hint: 'Soft inner borders' },
+  accent:     { label: 'Accent',           hint: 'Map title, highlights' },
+  chipBg:     { label: 'Pill background',  hint: 'Touchpoint pills' },
+  chipText:   { label: 'Pill text',        hint: 'Text on pills' },
+};
+const ROLE_EDITOR_FALLBACK = Object.assign({}, ROLE_FALLBACK_TOKEN, { stageText: '--text-2' });
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
@@ -807,11 +874,7 @@ function moveCategory(from, to) {
 }
 
 // ─── Persona CRUD ─────────────────────────────────────────────────────────────
-function createPersona(name) {
-  state.personas.push(newPersona(name || `Persona ${state.personas.length + 1}`));
-  _pendingRename = 'persona';
-  save(); render();
-}
+// (creation goes through openPersonaEditor — Change 21)
 function renamePersona(i, name) {
   const p = state.personas[i]; if (!p) return;
   p.name = name.trim() || `Persona ${i + 1}`;
@@ -1497,9 +1560,20 @@ function openPersonaCard(personaId) {
   if (!p.role && !p.description && !p.quote && listCount === 0) {
     const e = document.createElement('div');
     e.className = 'pc-empty';
-    e.textContent = 'No details yet — import personas from JSON (↥) to fill this card.';
+    e.textContent = 'No details yet — add them here (Edit) or import personas from JSON (↥).';
     card.appendChild(e);
   }
+  const footer = document.createElement('div');
+  footer.className = 'pc-footer';
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.className = 'btn btn-ghost btn-sm';
+  editBtn.textContent = '✎ Edit';
+  editBtn.setAttribute('aria-label', `Edit ${p.name}`);
+  editBtn.title = 'Edit this persona';
+  editBtn.addEventListener('click', () => { closeIt(); openPersonaEditor(p.id); });
+  footer.appendChild(editBtn);
+  card.appendChild(footer);
   overlay.appendChild(card);
   function closeIt() {
     overlay.remove();
@@ -1512,6 +1586,342 @@ function openPersonaCard(personaId) {
   document.addEventListener('keydown', onKey, true);
   document.body.appendChild(overlay);
   closeBtn.focus();
+}
+
+// ─── Persona editor (create/edit all fields by hand — Change 21) ──────────────
+function openPersonaEditor(personaId) {
+  const existing = personaId != null ? state.personas.find(p => p.id === personaId) : null;
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', existing ? `Edit persona — ${existing.name}` : 'New persona');
+  const card = document.createElement('div');
+  card.className = 'persona-card persona-editor';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'pc-close';
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close persona editor');
+  closeBtn.title = 'Close (Escape)';
+  card.appendChild(closeBtn);
+
+  const h = document.createElement('h2');
+  h.textContent = existing ? 'Edit persona' : 'New persona';
+  card.appendChild(h);
+
+  function field(labelText, value, ariaLabel) {
+    const wrap = document.createElement('div');
+    wrap.className = 'pe-field';
+    const lab = document.createElement('div');
+    lab.className = 'pc-label';
+    lab.textContent = labelText;
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'pe-input';
+    inp.value = value || '';
+    inp.setAttribute('aria-label', ariaLabel);
+    wrap.appendChild(lab);
+    wrap.appendChild(inp);
+    card.appendChild(wrap);
+    return inp;
+  }
+  function area(labelText, value, ariaLabel, rows) {
+    const wrap = document.createElement('div');
+    wrap.className = 'pe-field';
+    const lab = document.createElement('div');
+    lab.className = 'pc-label';
+    lab.textContent = labelText;
+    const ta = document.createElement('textarea');
+    ta.className = 'pe-area';
+    ta.rows = rows || 3;
+    ta.value = value || '';
+    ta.placeholder = 'One per line';
+    ta.setAttribute('aria-label', ariaLabel);
+    wrap.appendChild(lab);
+    wrap.appendChild(ta);
+    card.appendChild(wrap);
+    return ta;
+  }
+
+  const nameIn  = field('Name', existing?.name, 'Persona name');
+  const roleIn  = field('Role', existing?.role, 'Persona role');
+  const descIn  = area('Description', existing?.description, 'Persona description', 3);
+  const quoteIn = area('Quote', existing?.quote, 'Persona quote', 2);
+  const goalsIn = area('Goals', (existing?.goals || []).join('\n'), 'Persona goals', 3);
+  const needsIn = area('Needs', (existing?.needs || []).join('\n'), 'Persona needs', 3);
+  const frusIn  = area('Frustrations', (existing?.frustrations || []).join('\n'), 'Persona frustrations', 3);
+
+  const footer = document.createElement('div');
+  footer.className = 'pc-footer';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn btn-ghost btn-sm';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => closeIt());
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'btn btn-primary btn-sm';
+  saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', commit);
+  footer.appendChild(cancelBtn);
+  footer.appendChild(saveBtn);
+  card.appendChild(footer);
+
+  const lines = ta => ta.value.split(/\n/).map(s => s.trim()).filter(Boolean);
+  function commit() {
+    const name = nameIn.value.trim() || `Persona ${state.personas.length + 1}`;
+    let p = existing;
+    if (!p) { p = newPersona(name); state.personas.push(p); }
+    p.name = name;
+    p.role = roleIn.value.trim();
+    p.description = descIn.value.trim();
+    p.quote = quoteIn.value.trim();
+    p.goals = lines(goalsIn);
+    p.needs = lines(needsIn);
+    p.frustrations = lines(frusIn);
+    save();
+    renderPersonaList(); renderJourneyMeta(); renderJourneyList();
+    closeIt();
+  }
+  // Enter commits from the single-line fields (inside textareas Enter = new line)
+  [nameIn, roleIn].forEach(inp => inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+  }));
+
+  function closeIt() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeIt(); } }
+  closeBtn.addEventListener('click', closeIt);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+  document.addEventListener('keydown', onKey, true);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  nameIn.focus();
+  if (existing) nameIn.select();
+}
+
+// ─── Theme editor (create/edit a brand theme by hand — Change 21) ─────────────
+function toSwatchHex(hex) {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  return '#' + h.slice(0, 6).toLowerCase();
+}
+function openThemeEditor(themeId) {
+  const existing = themeId != null ? state.brandThemes.find(t => t.id === themeId) : null;
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', existing ? `Edit theme — ${existing.name}` : 'New theme');
+  const card = document.createElement('div');
+  card.className = 'theme-editor';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'te-close';
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close theme editor');
+  closeBtn.title = 'Close (Escape)';
+  card.appendChild(closeBtn);
+
+  const h = document.createElement('h2');
+  h.textContent = existing ? 'Edit theme' : 'New theme';
+  card.appendChild(h);
+  const sub = document.createElement('div');
+  sub.className = 'te-sub';
+  sub.textContent = 'Colors for journey map exports';
+  card.appendChild(sub);
+
+  const nameIn = document.createElement('input');
+  nameIn.type = 'text';
+  nameIn.className = 'te-name';
+  nameIn.value = existing?.name || '';
+  nameIn.placeholder = 'Theme name';
+  nameIn.setAttribute('aria-label', 'Theme name');
+  card.appendChild(nameIn);
+
+  const rolesUl = document.createElement('ul');
+  rolesUl.className = 'te-roles';
+  const roleEls = {}; // role → hex text input
+  THEME_ROLES.forEach(role => {
+    const meta = THEME_ROLE_META[role] || { label: role, hint: '' };
+    const fallback = cssVar(ROLE_EDITOR_FALLBACK[role], '#888888');
+    const fbSwatch = toSwatchHex(fallback) || '#888888';
+    const li = document.createElement('li');
+    li.className = 'te-role-row';
+
+    const swatch = document.createElement('input');
+    swatch.type = 'color';
+    swatch.className = 'te-swatch';
+    swatch.value = toSwatchHex(existing?.colors[role]) || fbSwatch;
+    swatch.setAttribute('aria-label', `${meta.label} color`);
+    swatch.title = `${meta.label} — pick a color`;
+
+    const hexIn = document.createElement('input');
+    hexIn.type = 'text';
+    hexIn.className = 'te-hex';
+    hexIn.value = existing?.colors[role] || '';
+    hexIn.placeholder = fallback.toUpperCase();
+    hexIn.spellcheck = false;
+    hexIn.setAttribute('aria-label', `${meta.label} hex value`);
+
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'te-clear';
+    clear.textContent = '×';
+    clear.setAttribute('aria-label', `Clear ${meta.label} — fall back to the app theme`);
+    clear.title = 'Clear — fall back to the app theme';
+    clear.addEventListener('click', () => {
+      hexIn.value = '';
+      swatch.value = fbSwatch;
+      syncPreview();
+    });
+
+    const metaWrap = document.createElement('div');
+    metaWrap.className = 'te-meta';
+    const rl = document.createElement('span');
+    rl.className = 'te-rl';
+    rl.textContent = meta.label;
+    const rh = document.createElement('span');
+    rh.className = 'te-rh';
+    rh.textContent = meta.hint;
+    metaWrap.appendChild(rl);
+    metaWrap.appendChild(rh);
+
+    swatch.addEventListener('input', () => { hexIn.value = swatch.value; syncPreview(); });
+    hexIn.addEventListener('input', () => {
+      const v = toSwatchHex(hexIn.value);
+      if (v) swatch.value = v;
+      syncPreview();
+    });
+
+    li.appendChild(swatch);
+    li.appendChild(hexIn);
+    li.appendChild(clear);
+    li.appendChild(metaWrap);
+    rolesUl.appendChild(li);
+    roleEls[role] = hexIn;
+  });
+  card.appendChild(rolesUl);
+
+  // live preview strip — recolors on every input; unset roles fall back to app tokens
+  const pv = document.createElement('div');
+  pv.className = 'te-preview';
+  pv.setAttribute('role', 'img');
+  pv.setAttribute('aria-label', 'Live theme preview');
+  const pvTitle = document.createElement('div');
+  pvTitle.className = 'te-pv-title';
+  pvTitle.textContent = currentJourney()?.title || 'Customer journey map';
+  const pvStage = document.createElement('div');
+  pvStage.className = 'te-pv-stage';
+  pvStage.textContent = 'Application';
+  const pvStep = document.createElement('div');
+  pvStep.className = 'te-pv-step';
+  pvStep.textContent = 'Fill personal data form';
+  const pvRow = document.createElement('div');
+  pvRow.className = 'te-pv-row';
+  const pvLabel = document.createElement('div');
+  pvLabel.className = 'te-pv-label';
+  pvLabel.textContent = 'Actions';
+  const pvCell = document.createElement('div');
+  pvCell.className = 'te-pv-cell';
+  const pvText = document.createElement('div');
+  pvText.className = 'te-pv-text';
+  pvText.textContent = 'Fills in the personal data form';
+  const pvPill = document.createElement('span');
+  pvPill.className = 'te-pv-pill';
+  pvPill.textContent = 'E-mail';
+  pvCell.appendChild(pvText);
+  pvCell.appendChild(pvPill);
+  pvRow.appendChild(pvLabel);
+  pvRow.appendChild(pvCell);
+  const pvHint = document.createElement('div');
+  pvHint.className = 'te-pv-hint';
+  pvHint.textContent = 'Live preview — roles left empty fall back to the app theme';
+  pv.appendChild(pvTitle);
+  pv.appendChild(pvStage);
+  pv.appendChild(pvStep);
+  pv.appendChild(pvRow);
+  pv.appendChild(pvHint);
+  card.appendChild(pv);
+
+  const footer = document.createElement('div');
+  footer.className = 'te-footer';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'btn btn-ghost btn-sm';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => closeIt());
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'btn btn-primary btn-sm';
+  saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', commit);
+  footer.appendChild(cancelBtn);
+  footer.appendChild(saveBtn);
+  card.appendChild(footer);
+
+  function val(role) {
+    const v = (roleEls[role] ? roleEls[role].value : '').trim();
+    return BRAND_THEME_HEX.test(v) ? v : cssVar(ROLE_EDITOR_FALLBACK[role], '#888888');
+  }
+  function syncPreview() {
+    pv.style.background = val('bg');
+    pv.style.borderColor = val('border');
+    pvTitle.style.color = val('accent');
+    pvStage.style.background = val('stageBg');
+    pvStage.style.color = val('stageText');
+    pvStep.style.background = val('stepBg');
+    pvStep.style.color = val('text');
+    pvStep.style.borderBottom = '1px solid ' + val('border');
+    pvLabel.style.background = val('labelBg');
+    pvLabel.style.color = val('labelText');
+    pvLabel.style.borderRight = '1px solid ' + val('borderSoft');
+    pvCell.style.background = val('cellBg');
+    pvCell.style.borderTop = '1px solid ' + val('borderSoft');
+    pvText.style.color = val('text');
+    pvPill.style.background = val('chipBg');
+    pvPill.style.color = val('chipText');
+  }
+  function commit() {
+    const name = nameIn.value.trim() || `Theme ${state.brandThemes.length + 1}`;
+    const colors = {};
+    THEME_ROLES.forEach(role => {
+      const v = roleEls[role].value.trim();
+      if (BRAND_THEME_HEX.test(v)) colors[role] = v;
+    });
+    if (existing) { existing.name = name; existing.colors = colors; }
+    else state.brandThemes.push({ id: uid(), name, colors });
+    save(); render();
+    closeIt();
+  }
+  nameIn.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+  });
+
+  function closeIt() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (prevFocus && prevFocus.focus) prevFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeIt(); } }
+  closeBtn.addEventListener('click', closeIt);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeIt(); });
+  document.addEventListener('keydown', onKey, true);
+  syncPreview();
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  nameIn.focus();
+  if (existing) nameIn.select();
 }
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
@@ -2010,6 +2420,7 @@ function renderPersonaList() {
       draggable: true,
       onActivate: () => personaActivate(p.id),
       onRename: v => renamePersona(i, v),
+      onEdit: () => openPersonaEditor(p.id),
       onRemove: () => removePersona(i),
       onMove: (from, to) => movePersona(from, to),
       dragKind: 'persona',
@@ -2032,11 +2443,12 @@ function renderThemeList() {
         if (!cj) { flashToast('Open a journey first'); return; }
         setJourneyBrandTheme(cj.brandThemeId === t.id ? null : t.id); // click again = back to app theme
       },
+      onEdit: () => openThemeEditor(t.id),
       onRemove: () => removeBrandTheme(i),
     });
     themeList.appendChild(li);
   });
-  if (state.brandThemes.length === 0) themeList.innerHTML = '<li class="sb-empty">No themes yet — ↥ import a themes JSON file (a bare list of {name, colors} works too).</li>';
+  if (state.brandThemes.length === 0) themeList.innerHTML = '<li class="sb-empty">No themes yet — add one (+) or ↥ import a themes JSON file.</li>';
 }
 
 // ─── Sidebar: journeys ────────────────────────────────────────────────────────
@@ -2073,7 +2485,7 @@ function renameJourneyInline(i, v) {
 function renderSidebarJourneyTitle() { renderJourneyList(); }
 
 // generic sidebar item builder
-function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRename, onRemove, onMove, dragKind }) {
+function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRename, onEdit, onRemove, onMove, dragKind }) {
   const li = document.createElement('li');
   li.className = 'sb-item' + (active ? ' active' : '') + (card ? ' sb-card' : '');
   li.draggable = !!draggable;
@@ -2100,14 +2512,16 @@ function mkSidebarItem({ name, active, sub, draggable, card, onActivate, onRenam
   });
 
   let editBtn = null;
-  if (onRename) {
+  if (onRename || onEdit) {
     editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'item-edit';
     editBtn.textContent = '✎';
-    editBtn.setAttribute('aria-label', 'Rename');
-    editBtn.title = 'Rename';
-    editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
+    editBtn.setAttribute('aria-label', onEdit ? 'Edit' : 'Rename');
+    editBtn.title = onEdit ? 'Edit' : 'Rename';
+    // onEdit opens a modal editor (persona/theme, Change 21); otherwise inline rename
+    if (onEdit) editBtn.addEventListener('click', e => { e.stopPropagation(); onEdit(); });
+    else editBtn.addEventListener('click', e => { e.stopPropagation(); startEdit(nameSpan, name, onRename); });
   }
 
   const removeBtn = document.createElement('button');
@@ -3086,6 +3500,112 @@ My current journey JSON:
 ${journeyJsonForPrompt(j)}`;
 }
 
+const AI_PROMPT_PERSONAS = `You are helping a UX designer create personas for customer-journey maps. The personas will be imported into a journey-mapping tool from a JSON file, so at the very end it MUST follow the JSON contract below exactly.
+
+STEP 1 — Interview me first (do not generate any JSON yet)
+- Ask about 6-10 questions in total, delivered in small rounds of 2-4 questions.
+- Cover, in order: the product or process and its goal; who uses it (segments, roles, company sizes); each segment's goals, context and constraints; what data exists (user research, interviews, analytics, support tickets, expert knowledge).
+- At any point I may paste research materials (interview notes, transcripts, reports). Mine them for content instead of inventing.
+- If I say "generate now", stop asking and build the personas from what you already have.
+
+STEP 2 — Mark assumptions
+Anything not grounded in my answers or the pasted materials is an assumption. List the assumptions in your final reply BEFORE the JSON block, one line each.
+
+STEP 3 — Persona semantics
+Produce 2-4 clearly differentiated personas. For each:
+- "name" — a realistic name (avoid stereotype labels like "Busy Bob")
+- "role" — their job or life situation in one line
+- "description" — a 2-4 sentence narrative: context, a typical day, their relationship with the product
+- "goals" — what they want to achieve (short phrases)
+- "needs" — what they need to succeed
+- "frustrations" — what annoys or blocks them today
+- "quote" — a first-person one-liner capturing their attitude
+Writing rules: ground everything in the research I gave; goals/needs/frustrations are lists of short, independent phrases; the quote should sound like something this person would actually say.
+
+STEP 4 — The JSON contract (example with one persona)
+{
+  "version": 1,
+  "kind": "personas",
+  "app": "customer-journey",
+  "personas": [
+    {
+      "name": "Anna Kowalska",
+      "role": "Senior accountant",
+      "description": "Anna manages monthly closings for a mid-sized company. She works in several systems daily and is accountable for every number she submits.",
+      "goals": ["Close the month without overtime", "Trust the numbers she submits"],
+      "needs": ["Clear status of every pending item", "Exports she can hand to the audit"],
+      "frustrations": ["Re-enters the same data in three systems"],
+      "quote": "I just need to know it's done right."
+    }
+  ]
+}
+
+Contract notes:
+- All fields except "name" are optional; lists are arrays of short strings.
+- Always include "kind": "personas".
+- Unknown fields are ignored.
+
+STEP 5 — Output
+Finish your reply with the complete JSON in a single \`\`\`json code block. Nothing after the block. Valid JSON only: no comments, no trailing commas, double quotes.`;
+
+const AI_PROMPT_THEMES = `You are helping a UX designer build a brand color theme for customer-journey map exports — a poster-style PNG of a journey grid (title, stage bands, step headers, row labels, cells, touchpoint pills). The theme will be imported into a journey-mapping tool from a JSON file, so at the very end it MUST follow the JSON contract below exactly.
+
+STEP 1 — Understand the brand
+- I will give you a brand name, a website, brand-book hex values, or a mood description.
+- If I only give a brand name, derive its public brand colors and treat every hex you inferred as an assumption.
+- If nothing usable is given, ask ONE short round of questions (max 3) — then proceed.
+
+STEP 2 — The color roles you are filling
+Each role is optional; a missing role falls back to the tool's neutral gray-blue default. Roles:
+- "bg" — map background (the canvas behind everything)
+- "stageBg" — stage band background; "stageText" — text on stage bands
+- "stepBg" — step header background
+- "labelBg" — row-label column background; "labelText" — row-label text
+- "cellBg" — data cell background; "text" — step names and cell text
+- "border" — strong borders; "borderSoft" — soft cell separators (keep it lighter than "border")
+- "accent" — the map title and highlights
+- "chipBg" — touchpoint pill background; "chipText" — pill text
+Color rules:
+- Values are hex colors ("#rgb" or "#rrggbb").
+- Text-on-background pairs must reach WCAG AA contrast (>= 4.5:1): stageText on stageBg, labelText on labelBg, text on cellBg, chipText on chipBg.
+- Prefer a light "bg" and "cellBg" — the map is often printed or projected.
+- "accent" is the brand's primary color; keep borders subtle.
+
+STEP 3 — The JSON contract (example with one theme)
+{
+  "version": 1,
+  "kind": "themes",
+  "app": "customer-journey",
+  "themes": [
+    {
+      "name": "Acme Corp",
+      "colors": {
+        "bg": "#ffffff",
+        "stageBg": "#e11d48",
+        "stageText": "#ffffff",
+        "stepBg": "#ffffff",
+        "labelBg": "#ffe4e6",
+        "labelText": "#9f1239",
+        "cellBg": "#ffffff",
+        "text": "#1f2937",
+        "border": "#fecdd3",
+        "borderSoft": "#fff1f2",
+        "accent": "#e11d48",
+        "chipBg": "#ffe4e6",
+        "chipText": "#9f1239"
+      }
+    }
+  ]
+}
+
+Contract notes:
+- Always include "kind": "themes".
+- Every color is optional — omit roles you cannot ground in the brand.
+- Unknown fields and unknown color keys are ignored.
+
+STEP 4 — Output
+List any assumptions (inferred hexes) BEFORE the JSON block, then finish your reply with the complete JSON in a single \`\`\`json code block. Nothing after the block. Valid JSON only: no comments, no trailing commas, double quotes.`;
+
 let _copyTimer = null;
 function copyText(text, btn) {
   const label = btn.dataset.label || btn.textContent;
@@ -3097,6 +3617,20 @@ function copyText(text, btn) {
     .then(() => { btn.textContent = '✓ Copied'; })
     .catch(() => { btn.textContent = '✗ Failed'; });
 }
+
+// AI prompt tabs (Change 15 + Change 21: journeys, personas, brand themes)
+const AI_TABS = [
+  { id: 'create',   label: 'Create journey' },
+  { id: 'expand',   label: 'Expand journey' },
+  { id: 'personas', label: 'Personas' },
+  { id: 'themes',   label: 'Brand themes' },
+];
+const AI_PROMPT_DEFS = {
+  create:   { aria: 'Prompt: create journey from scratch', build: () => AI_PROMPT_CREATE },
+  expand:   { aria: 'Prompt: expand current journey', build: () => buildAiPromptExpand(), jsonOnly: true },
+  personas: { aria: 'Prompt: create personas', build: () => AI_PROMPT_PERSONAS },
+  themes:   { aria: 'Prompt: create brand themes', build: () => AI_PROMPT_THEMES },
+};
 
 function openAiPrompt() {
   const prevFocus = document.activeElement;
@@ -3122,15 +3656,16 @@ function openAiPrompt() {
 
   const tabs = document.createElement('div');
   tabs.className = 'ap-tabs';
-  const tabCreate = document.createElement('button');
-  tabCreate.type = 'button';
-  tabCreate.className = 'btn btn-ghost btn-sm ap-tab';
-  tabCreate.textContent = 'Create from scratch';
-  const tabExpand = document.createElement('button');
-  tabExpand.type = 'button';
-  tabExpand.className = 'btn btn-ghost btn-sm ap-tab';
-  tabExpand.textContent = 'Expand current journey';
-  tabs.appendChild(tabCreate); tabs.appendChild(tabExpand);
+  const tabBtns = {};
+  AI_TABS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost btn-sm ap-tab';
+    btn.textContent = t.label;
+    btn.addEventListener('click', () => renderTab(t.id));
+    tabs.appendChild(btn);
+    tabBtns[t.id] = btn;
+  });
   card.appendChild(tabs);
 
   const how = document.createElement('div');
@@ -3145,13 +3680,14 @@ function openAiPrompt() {
   body.style.minHeight = '0';
   card.appendChild(body);
 
-  function renderTab(mode) {
+  function renderTab(id) {
     while (body.firstChild) body.removeChild(body.firstChild);
-    tabCreate.classList.toggle('active', mode === 'create');
-    tabCreate.setAttribute('aria-pressed', String(mode === 'create'));
-    tabExpand.classList.toggle('active', mode === 'expand');
-    tabExpand.setAttribute('aria-pressed', String(mode === 'expand'));
-    const promptText = mode === 'create' ? AI_PROMPT_CREATE : buildAiPromptExpand();
+    AI_TABS.forEach(t => {
+      tabBtns[t.id].classList.toggle('active', t.id === id);
+      tabBtns[t.id].setAttribute('aria-pressed', String(t.id === id));
+    });
+    const def = AI_PROMPT_DEFS[id];
+    const promptText = def.build();
     if (promptText == null) {
       const empty = document.createElement('div');
       empty.className = 'ap-empty';
@@ -3163,7 +3699,7 @@ function openAiPrompt() {
     ta.className = 'ap-prompt';
     ta.readOnly = true;
     ta.spellcheck = false;
-    ta.setAttribute('aria-label', mode === 'create' ? 'Prompt: create journey from scratch' : 'Prompt: expand current journey');
+    ta.setAttribute('aria-label', def.aria);
     ta.value = promptText;
     body.appendChild(ta);
     const actions = document.createElement('div');
@@ -3174,7 +3710,7 @@ function openAiPrompt() {
     copyBtn.textContent = 'Copy prompt';
     copyBtn.addEventListener('click', () => copyText(promptText, copyBtn));
     actions.appendChild(copyBtn);
-    if (mode === 'expand') {
+    if (def.jsonOnly) {
       const jsonBtn = document.createElement('button');
       jsonBtn.type = 'button';
       jsonBtn.className = 'btn btn-ghost btn-sm';
@@ -3184,9 +3720,6 @@ function openAiPrompt() {
     }
     body.appendChild(actions);
   }
-
-  tabCreate.addEventListener('click', () => renderTab('create'));
-  tabExpand.addEventListener('click', () => renderTab('expand'));
 
   overlay.appendChild(card);
   function closeIt() {
@@ -3394,7 +3927,7 @@ function importFromFile(file) {
         await importDatabase(data);
         const nj = state.categories.reduce((a, c) => a + (c.journeys?.length || 0), 0);
         flashToast(`✓ Imported (${nj} journeys)`);
-      } else if (data && data.kind === 'personas' && Array.isArray(data.personas)) {
+      } else if (data && (data.kind === 'personas' || Array.isArray(data.personas))) {
         const r = importPersonas(data);
         flashToast(`✓ Personas imported (${r.added} added, ${r.updated} updated)`);
       } else if (data && (data.kind === 'themes' || Array.isArray(data.themes) ||
@@ -3437,7 +3970,8 @@ function flashToast(msg) {
 // ─── Wiring ───────────────────────────────────────────────────────────────────
 document.getElementById('btn-theme').addEventListener('click', toggleTheme);
 document.getElementById('btn-add-category').addEventListener('click', () => createCategory());
-document.getElementById('btn-add-persona').addEventListener('click', () => createPersona());
+document.getElementById('btn-add-persona').addEventListener('click', () => openPersonaEditor(null));
+document.getElementById('btn-add-theme').addEventListener('click', () => openThemeEditor(null));
 document.getElementById('btn-add-journey').addEventListener('click', () => createJourney());
 btnEmptyAdd.addEventListener('click', () => {
   if (!currentCategory()) createCategory('Cash loan');

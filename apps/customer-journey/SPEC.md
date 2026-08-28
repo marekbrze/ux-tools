@@ -933,7 +933,7 @@ The user doesn't like the flow arrows added in Change 19. Remove them entirely; 
 5. **Regression check**: single-stage export = Change 18 layout exactly; multi-stage = gaps without arrows; step names use the full `colW - 16` width.
 
 ### Change 21 — feature: AI prompts + in-app editors for personas & brand themes (2026-08-28)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (node syntax check, HTML tag balance, no stale refs, CSS↔JS class cross-check); click-test pending
 
 **User goal**
 Users must be able to add personas and brand themes with **full freedom**, from inside the tool: (1) copyable **AI prompts** that teach a chat the `kind: 'personas'` and `kind: 'themes'` JSON contracts (the Change 15 pattern, extended), and (2) **UI elements to create/edit personas and enter themes by hand** — today personas are name-only in the UI (fields arrive only via JSON import) and themes have no creation UI at all (import-only).
