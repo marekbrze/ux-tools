@@ -821,3 +821,52 @@ Screenshots always fill 100% of the step column width; the Screenshots row (and 
 4. **Canvas guard** (`index.html:2700-2705`): after `totalW`/`totalH`, `const fit = Math.min(1, 30000 / totalW, 30000 / totalH);` then `canvas.width = totalW * dpr * fit; canvas.height = totalH * dpr * fit;` and `ctx.scale(dpr * fit, dpr * fit)` (replaces `ctx.scale(dpr, dpr)`). All drawing stays in logical coordinates; the `style.width/height` lines stay as they are.
 5. **Spec impact**: supersedes Change 11's cap decisions (grid "max-height cap (letterboxed…)", PNG "single-image height cap ~360px") — on conflict ux-build follows Change 17.
 6. **Regression check**: portrait shot > 440px tall renders full column width (no side gaps, no letterbox); short shot beside a tall one → flush top-left, empty space below; PNG band = tallest column, images flush left; journey with only short shots → PNG pixel-identical to today (`fit = 1`, `dw = availW` as before); screenshots CRUD + paste + drop + lightbox unchanged; both themes render the taller row correctly.
+
+### Change 18 — feature: poster-style PNG export — spacing, touchpoint pills, quote cards (2026-08-28)
+**Status**: planned — route to ux-build
+
+**User goal**
+The exported map must read like a **poster**, not a dense table: generous spacing between the map's sections (slice rows), touchpoints rendered as **pills**, and insights / pain points rendered as **quote cards** (typographic quotation marks, card boxes) instead of bare text lines.
+
+**Scope note**: "wydruk" = the **PNG export** (`exportPng()`) — the tool has no print stylesheet; the PNG is the presentation/print format. The on-screen grid is the editing surface and is **not** restyled by this Change.
+
+**MVP scope**
+- **Poster spacing & scale** (whole export): bigger outer margin, bigger header (title + persona), a **background gap between slice rows** (`rowGap`) so each row reads as a separate section, more inner padding per row, fonts scaled up one notch.
+- **Touchpoints row → pills**: each element as a rounded pill chip (chip tokens), laid out horizontally with wrapping — the `.fu-chip` look moved onto canvas.
+- **Insights & Pain points rows → quote cards**: each element as a rounded-rect card (border + padding) with a decorative opening quotation mark `"` and the text — stacked vertically in the cell.
+- **Export palette**: + `chip` / `chipText` (token fallbacks `--chip` / `--chip-text`) and two new **optional** brand-theme roles `chipBg` / `chipText` (partial themes stay legal — missing roles fall back to app tokens, the existing contract rule).
+- Row-height computation per row kind (pill lines / sum of card heights / wrapped lines).
+
+**Later (deferred)**
+- The same pill / quote-card treatments in the on-screen grid (today: pills only on follow-up chips).
+- Follow-up elements as cards with a channel chip in the export (today: composed plain text).
+- Per-slice accent tints (e.g. a red-tinted quote mark on pain points vs accent on insights).
+- Poster header extras: description/expectations under the title, export date.
+- Proportional scaling of the whole export (fonts + metrics together) — still deferred (Change 11 decision).
+
+**Impact**
+- **Data**: **none** — presentation only, all inside `exportPng()` / `exportPalette()`; no entities, no storage change, **no key version bump**.
+- **Actions**: none new; `exportPng()` internals change (layout constants + per-slice rendering + measurement).
+- **Screens**: no new surfaces — the exported PNG only. Grid, sidebar, modals untouched.
+- **States**: none new; empty cells keep the "—" placeholder (bigger row height).
+- **Interactions**: none new; export trigger, feedback ("✓ Saved") and the canvas `fit` guard (Change 17) unchanged.
+- **Edge cases**: a pill wider than the cell → text truncated with `…` (`trunc()`) to fit the available width; very many pills/cards → taller row (accepted — digital format); empty Touchpoints/Insights/Pain-points cells → "—" as today; brand themes without `chipBg`/`chipText` → app tokens; dark app theme → tokens resolve via `cssVar()` as today; total height growth covered by the existing `fit` guard; multi-line pill measurement uses the same ctx font as drawing (set before measuring).
+- **Glossary**: `poster export` (`poster-export`), `pill` (`tp-pill`), `quote card` (`quote-card`), `chip roles` (`chip-roles` — `chipBg`/`chipText`).
+
+**Build instructions for ux-build**
+1. **Theme roles** — `THEME_ROLES` (`index.html:505`): append `'chipBg'`, `'chipText'`; `ROLE_FALLBACK_TOKEN` (`index.html:506-509`): `chipBg: '--chip', chipText: '--chip-text'`. `normalizeBrandThemeColors` filters by `THEME_ROLES` (import tolerance automatic); `applyBrandThemeToGrid` (`index.html:685-693`) picks the fallback token as the CSS var → a brand theme defining `chipBg` also recolors grid chips (`.fu-chip`, usage chips) — coherent, no extra wiring.
+2. **`exportPalette()`** (`index.html:2609-2626`): + `chip: pick('chipBg', '--chip', '#eaecef')`, `chipText: pick('chipText', '--chip-text', '#57606a')`.
+3. **Layout constants** (`index.html:2659`): poster set — `pad = 32`, `headerH = 64`, `stepHeaderH = 40`, `lineH = 18`, `font = '13px -apple-system,Segoe UI,sans-serif'`; new: `rowGap = 14`, `rowPadY = 28` (per-row top+bottom padding baseline), `minRowH = 48`, `pillH = 22`, `pillGapX = 6`, `pillGapY = 8`, `pillPadX = 11`, `cardPad = 12`, `cardGap = 8`, `cardR = 10`, `pillFont = '600 12px -apple-system,Segoe UI,sans-serif'`. `labelW`/`colW` unchanged (440/170 — Change 17 decisions stand).
+4. **Measurement — `sliceRows`** (`index.html:2677-2696`): branch per slice kind (all measuring with `ctx.font` already set; pills measured with `pillFont`):
+   - `TOUCHPOINT_KEY`: per cell, greedy-wrap pill widths (`ctx.measureText(elementText) + 2*pillPadX`, clamp to `colW - 16` via `trunc`) into lines; `h = Math.max(minRowH, lines*pillH + (lines-1)*pillGapY + rowPadY)`.
+   - `insight` / `pain-point`: per cell, per element `wrapLines(el.text, colW - 16 - 2*cardPad - 18).length` lines → `cardH = lines*lineH + 2*cardPad`; `h = Math.max(minRowH, Σ(cardH) + (n-1)*cardGap + rowPadY)` (empty cell counts 0).
+   - other text rows: as today but `lineH = 18`, `rowPadY` instead of `+ 14`, `Math.max(minRowH, …)`.
+   - `SCREENSHOT_KEY`: `any ? maxH + rowPadY : minRowH` (was `+ 14` / `34`).
+   - `EMOTION_KEY`: `minRowH`.
+5. **Canvas size** (`index.html:2698-2699`): `totalH = pad*2 + headerH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h + rowGap, 0) - rowGap` (gap between rows, none after the last); stage band height 22 → 26 (`fillRect`/`fillText` baselines at `index.html:2720-2722` shift accordingly: `y + 17`); `fit` guard untouched.
+6. **Header** (`index.html:2709-2712`): poster header — title `bold 20px` in `C.accent` at `y0 + 22`; persona name (`personaName(j.personaId)`) as a second line `12px` in `C.labelText` at `y0 + 40`; both restore `ctx.font = font` after.
+7. **Slice-row drawing** (`index.html:2739-2791`): keep the label-column fill/border and cell fill/borderSoft per row; after each row advance `y += h + rowGap`. Inside cells, branch:
+   - **Touchpoints**: `ctx.font = pillFont`; pills laid out from `(x1 + 8, y + rowPadY/2)`, greedy line-wrap by measured width (`pillGapX`/`pillGapY`); each pill = `roundRect(x, py, w, pillH, pillH/2)` filled `C.chip` + centered text `C.chipText` (textBaseline middle, restore after); pill text truncated to `colW - 16 - 2*pillPadX` when a single pill overflows. Empty cell → "—" (labelText, `y + 17`). Restore `ctx.font = font` after the row.
+   - **Insight / pain-point cards**: per element, card rect `(x1 + 8, cy, colW - 16, cardH)` — `roundRect(..., cardR)`: fill `C.cell`, 1px stroke `C.border`; inside: opening quote `"` (`bold 18px`, `C.accent`) at `(cardX + cardPad, cardY + cardPad + 13)`, text `C.text` wrapped to `colW - 16 - 2*cardPad - 18` starting at `cardX + cardPad + 18` (indent all lines — hanging quote), first baseline `cardY + cardPad + 13`; next card at `+ cardH + cardGap`. Empty cell → "—". (Canvas `roundRect` with a fallback path helper if `ctx.roundRect` is unavailable.)
+   - Plain rows / emotion / screenshots: unchanged logic with the new metrics (screenshots `dy` starts at `y + rowPadY/2`).
+8. **Regression check**: export with a journey covering all row kinds (pills, cards, plain, emotion, screenshots) — no text clipping (heights match drawing), pills don't overlap, cards don't overlap; empty rows show "—"; hidden rows (Change 16) still excluded; brand theme + no brand theme; dark + light app theme; `fit` guard on a very tall journey; on-screen grid pixel-unchanged; JSON export/import untouched.
