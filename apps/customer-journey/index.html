@@ -2704,17 +2704,6 @@ async function exportPng() {
     ctx.closePath();
   }
 
-  // flow arrow (Change 19): shaft + chevron head centered at (cx, cy)
-  function drawArrow(cx, cy, size, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(cx - size, cy + 0.5); ctx.lineTo(cx + size - 6, cy + 0.5);
-    ctx.moveTo(cx + size, cy + 0.5); ctx.lineTo(cx + size - 6, cy - 3.5);
-    ctx.moveTo(cx + size, cy + 0.5); ctx.lineTo(cx + size - 6, cy + 4.5);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-  }
-
   // touchpoint pills for one cell — greedy line-wrap of measured pill widths (pill font!)
   function pillPlan(list, availW) {
     ctx.font = pillFont;
@@ -2807,18 +2796,8 @@ async function exportPng() {
     ctx.fillStyle = C.panel; ctx.fillRect(x1, y, colW, stepHeaderH);
     ctx.strokeStyle = C.border; ctx.strokeRect(x1, y, colW, stepHeaderH);
     ctx.fillStyle = C.text; ctx.font = '600 13px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(trunc(ctx, f.step.name, colW - (col < flat.length - 1 ? 26 : 16)), x1 + 8, y + 25);
+    ctx.fillText(trunc(ctx, f.step.name, colW - 16), x1 + 8, y + 25);
   });
-  // flow arrows: chevrons within a stage (panel knockout), accent arrows across the stage gaps
-  for (let col = 0; col < flat.length - 1; col++) {
-    const cur = colX(col) + colW, next = colX(col + 1);
-    if (stageOrd[col + 1] === stageOrd[col]) {
-      ctx.fillStyle = C.panel; ctx.fillRect(cur - 8, y + 1, 16, stepHeaderH - 2);
-      drawArrow(cur, y + stepHeaderH / 2, 8, C.labelText);
-    } else {
-      drawArrow((cur + next) / 2, y + stepHeaderH / 2, 10, C.accent);
-    }
-  }
   ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, stepHeaderH);
   ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, stepHeaderH);
   ctx.fillStyle = C.labelText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';

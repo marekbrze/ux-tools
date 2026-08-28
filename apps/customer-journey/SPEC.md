@@ -905,3 +905,29 @@ The export's horizontal sections must be visually separated too: a stage's group
 5. **`drawArrow(cx, cy, size, color)` helper** (next to `rr()`): shaft `cx - size → cx + size - 6` + a chevron head (tip `cx + size`, wings back 6px), `lineWidth 1.5`, restored to 1 after.
 6. **Slice-row cell loop**: `const x1 = colX(col)` (the only other place column x is computed).
 7. **Regression check**: single-stage journey → export identical to Change 18's layout (no gaps/arrows beyond same-stage chevrons); multi-stage → gaps in every row incl. screenshots band; arrows don't overlap names (long step names truncate); hidden rows/slices, brand themes, `fit` guard, JSON IO untouched.
+
+### Change 20 — feature: remove flow arrows, keep stage gaps (2026-08-28)
+**Status**: built — interview decision ("Usuń całkiem"); static verification passed
+
+**User goal**
+The user doesn't like the flow arrows added in Change 19. Remove them entirely; the horizontal **stage gaps stay** — the section separation alone reads well enough.
+
+**MVP scope**
+- Delete both arrow kinds from the PNG export: the same-stage chevrons with panel knockout and the accent arrows in the stage gaps.
+- Revert the step-name trunc allowance (`colW - 26` → `colW - 16`) — it existed only to clear the arrow knockout.
+- `drawArrow()` helper becomes dead code → removed.
+
+**Later (deferred)**
+- A subtle `›` glyph between steps / in the gaps, if the flow direction is ever needed again.
+
+**Impact**
+- **Data / Actions / Screens / States / Interactions**: none — `exportPng()` internals only, **no key version bump**.
+- **Edge cases**: none new — stage gaps, `colX`, `totalW` and the `fit` guard from Change 19 remain unchanged.
+- **Glossary**: `flow arrow` becomes historical (Change 19).
+
+**Build instructions for ux-build**
+1. Remove the arrows `for` loop after the step-header loop (knockout + `drawArrow` calls).
+2. Remove the `drawArrow()` helper definition.
+3. Step-name trunc back to `colW - 16` for all columns.
+4. Keep everything else from Change 19 (`stageGap`, `stageOrd`/`colX`, `totalW`).
+5. **Regression check**: single-stage export = Change 18 layout exactly; multi-stage = gaps without arrows; step names use the full `colW - 16` width.
