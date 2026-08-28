@@ -823,7 +823,7 @@ Screenshots always fill 100% of the step column width; the Screenshots row (and 
 6. **Regression check**: portrait shot > 440px tall renders full column width (no side gaps, no letterbox); short shot beside a tall one → flush top-left, empty space below; PNG band = tallest column, images flush left; journey with only short shots → PNG pixel-identical to today (`fit = 1`, `dw = availW` as before); screenshots CRUD + paste + drop + lightbox unchanged; both themes render the taller row correctly.
 
 ### Change 18 — feature: poster-style PNG export — spacing, touchpoint pills, quote cards (2026-08-28)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (node syntax check; no headless browser available for a rendered smoke test); click-test pending. Folded fixes found during the build: (1) `totalH` never included the stage-band height (22px) — the bottom of the last row was clipped in every export before; now counted (`stageBandH`). (2) plain-row height measurement wrapped `el.text` while drawing used `elementText()` (composed follow-up text could overflow its row) — measurement now uses `elementText()` too.
 
 **User goal**
 The exported map must read like a **poster**, not a dense table: generous spacing between the map's sections (slice rows), touchpoints rendered as **pills**, and insights / pain points rendered as **quote cards** (typographic quotation marks, card boxes) instead of bare text lines.

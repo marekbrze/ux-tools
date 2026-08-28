@@ -502,10 +502,11 @@ const EMO_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e']; // 1
 
 // Brand theme color roles (each optional — falls back to the app token).
 // stageText has no direct token: it maps to the dedicated --cj-stage-text var.
-const THEME_ROLES = ['bg', 'stageBg', 'stageText', 'stepBg', 'labelBg', 'labelText', 'cellBg', 'text', 'border', 'borderSoft', 'accent'];
+const THEME_ROLES = ['bg', 'stageBg', 'stageText', 'stepBg', 'labelBg', 'labelText', 'cellBg', 'text', 'border', 'borderSoft', 'accent', 'chipBg', 'chipText'];
 const ROLE_FALLBACK_TOKEN = {
   bg: '--bg', stageBg: '--panel-3', stepBg: '--panel', labelBg: '--panel-2', cellBg: '--cell',
   labelText: '--text-3', text: '--text-2', border: '--border', borderSoft: '--border-soft', accent: '--accent',
+  chipBg: '--chip', chipText: '--chip-text',
 };
 const BRAND_THEME_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
@@ -2622,6 +2623,8 @@ function exportPalette() {
     border:     pick('border',     '--border',      '#d0d7de'),
     borderSoft: pick('borderSoft', '--border-soft', '#e5e7eb'),
     accent:     pick('accent',     '--accent',      '#2563eb'),
+    chip:       pick('chipBg',     '--chip',        '#eaecef'),
+    chipText:   pick('chipText',   '--chip-text',   '#57606a'),
   };
 }
 
@@ -2656,7 +2659,15 @@ async function exportPng() {
   }))));
 
   const C = exportPalette();
-  const pad = 14, headerH = 30, stepHeaderH = 32, labelW = 170, colW = 440, lineH = 15, font = '12px -apple-system,Segoe UI,sans-serif';
+  // poster metrics (Change 18): generous margins, slice rows separated by background gaps
+  const pad = 32, headerH = 64, stageBandH = 26, stepHeaderH = 40, labelW = 170, colW = 440;
+  const lineH = 18, font = '13px -apple-system,Segoe UI,sans-serif';
+  const rowGap = 14, rowPadY = 28, minRowH = 48;
+  const pillH = 22, pillGapX = 6, pillGapY = 8, pillPadX = 11;
+  const pillFont = '600 12px -apple-system,Segoe UI,sans-serif';
+  const cardPad = 12, cardGap = 8, cardR = 10, quoteIndent = 18;
+  const quoteFont = 'bold 18px -apple-system,Segoe UI,sans-serif';
+  const QUOTE_KEYS = ['insight', 'pain-point']; // rendered as quote cards
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
@@ -2674,6 +2685,35 @@ async function exportPng() {
     return lines;
   }
 
+  // rounded-rect path (ctx.roundRect with a manual fallback)
+  function rr(x, y, w, h, r) {
+    const rad = Math.max(0, Math.min(r, h / 2, w / 2));
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, rad); return; }
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  // touchpoint pills for one cell — greedy line-wrap of measured pill widths (pill font!)
+  function pillPlan(list, availW) {
+    ctx.font = pillFont;
+    const lines = [[]];
+    list.forEach(el => {
+      const label = trunc(ctx, elementText(el, TOUCHPOINT_KEY), availW - 2 * pillPadX);
+      const w = Math.min(availW, Math.ceil(ctx.measureText(label).width) + 2 * pillPadX);
+      const line = lines[lines.length - 1];
+      const used = line.reduce((a, p) => a + p.w + pillGapX, 0) - (line.length ? pillGapX : 0);
+      if (used > 0 && used + w > availW) lines.push([{ label, w }]);
+      else line.push({ label, w });
+    });
+    ctx.font = font;
+    return lines;
+  }
+
   const sliceRows = visibleSlices(j).map(slice => {
     if (slice.key === SCREENSHOT_KEY) {
       let maxH = 0, any = false;
@@ -2681,22 +2721,39 @@ async function exportPng() {
         const plan = shotDrawPlan((f.step.cells || {})[SCREENSHOT_KEY] || [], colW - 16);
         if (plan) { any = true; maxH = Math.max(maxH, plan.contentH); }
       });
-      return { slice, h: any ? maxH + 14 : 34 };
+      return { slice, h: any ? maxH + rowPadY : minRowH };
+    }
+    if (slice.key === EMOTION_KEY) return { slice, h: minRowH };
+    if (slice.key === TOUCHPOINT_KEY) { // pills: height from wrapped pill lines
+      let maxLines = 1;
+      flat.forEach(f => { maxLines = Math.max(maxLines, pillPlan(f.step.cells[TOUCHPOINT_KEY] || [], colW - 16).length); });
+      return { slice, h: Math.max(minRowH, maxLines * pillH + (maxLines - 1) * pillGapY + rowPadY) };
+    }
+    if (QUOTE_KEYS.includes(slice.key)) { // quote cards: height from the tallest stack
+      let maxStack = 0;
+      flat.forEach(f => {
+        let hh = 0, n = 0;
+        (f.step.cells[slice.key] || []).forEach(el => {
+          hh += Math.max(1, wrapLines(el.text, colW - 16 - 2 * cardPad - quoteIndent).length) * lineH + 2 * cardPad + (n ? cardGap : 0);
+          n++;
+        });
+        maxStack = Math.max(maxStack, hh);
+      });
+      return { slice, h: Math.max(minRowH, maxStack + rowPadY) };
     }
     let maxLines = 1;
     flat.forEach(f => {
-      if (slice.key === EMOTION_KEY) { maxLines = Math.max(maxLines, 1); return; }
       const list = f.step.cells[slice.key] || [];
       let n = 0;
-      list.forEach(el => { n += Math.max(1, wrapLines(el.text, colW - 18).length); });
+      list.forEach(el => { n += Math.max(1, wrapLines(elementText(el, slice.key), colW - 18).length); });
       if (list.length === 0) n = 1;
       maxLines = Math.max(maxLines, n);
     });
-    return { slice, h: Math.max(34, maxLines * lineH + 14) };
+    return { slice, h: Math.max(minRowH, maxLines * lineH + rowPadY) };
   });
 
   const totalW = pad * 2 + labelW + colW * flat.length;
-  const totalH = pad * 2 + headerH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h, 0);
+  const totalH = pad * 2 + headerH + stageBandH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h + rowGap, 0) - rowGap;
   const dpr = window.devicePixelRatio || 1;
   const fit = Math.min(1, 30000 / totalW, 30000 / totalH); // canvas safety: browsers cap ~32,767px (Change 17)
   canvas.width = totalW * dpr * fit; canvas.height = totalH * dpr * fit;
@@ -2707,8 +2764,12 @@ async function exportPng() {
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, totalW, totalH);
 
   const x0 = pad, y0 = pad;
-  ctx.fillStyle = C.accent; ctx.font = 'bold 14px -apple-system,Segoe UI,sans-serif';
-  ctx.fillText(`${j.title}  ·  ${personaName(j.personaId)}`, x0, y0 + 16);
+  ctx.fillStyle = C.accent; ctx.font = 'bold 20px -apple-system,Segoe UI,sans-serif';
+  ctx.fillText(trunc(ctx, j.title, totalW - 2 * pad), x0, y0 + 22);
+  if (j.personaId != null) {
+    ctx.fillStyle = C.labelText; ctx.font = '13px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(trunc(ctx, personaName(j.personaId), totalW - 2 * pad), x0, y0 + 44);
+  }
   ctx.font = font;
 
   let y = y0 + headerH;
@@ -2717,30 +2778,33 @@ async function exportPng() {
     const lasts = []; for (let i = 0; i < flat.length; i++) if (flat[i].stage === st) lasts.push(i);
     const last = lasts[lasts.length - 1];
     const x1 = x0 + labelW + first * colW;
-    ctx.fillStyle = C.stageBg; ctx.fillRect(x1, y, (last - first + 1) * colW, 22);
-    ctx.fillStyle = C.stageText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(st.name, x1 + 8, y + 15);
+    ctx.fillStyle = C.stageBg; ctx.fillRect(x1, y, (last - first + 1) * colW, stageBandH);
+    ctx.fillStyle = C.stageText; ctx.font = 'bold 13px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(st.name, x1 + 8, y + 18);
     ctx.font = font;
   });
-  y += 22;
+  y += stageBandH;
 
   flat.forEach((f, col) => {
     const x1 = x0 + labelW + col * colW;
     ctx.fillStyle = C.panel; ctx.fillRect(x1, y, colW, stepHeaderH);
     ctx.strokeStyle = C.border; ctx.strokeRect(x1, y, colW, stepHeaderH);
-    ctx.fillStyle = C.text;
-    ctx.fillText(trunc(ctx, f.step.name, colW - 12), x1 + 7, y + 20);
+    ctx.fillStyle = C.text; ctx.font = '600 13px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(trunc(ctx, f.step.name, colW - 16), x1 + 8, y + 25);
   });
   ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, stepHeaderH);
   ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, stepHeaderH);
-  ctx.fillStyle = C.labelText; ctx.fillText('Step', x0 + 8, y + 20);
+  ctx.fillStyle = C.labelText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
+  ctx.fillText('Step', x0 + 8, y + 25);
+  ctx.font = font;
   y += stepHeaderH;
 
   sliceRows.forEach(({ slice, h }) => {
+    const cy = y + rowPadY / 2; // content area starts here; first text baseline ≈ cy + 13
     ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, h);
     ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, h);
-    ctx.fillStyle = C.labelText; ctx.font = 'bold 11px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(slice.label, x0 + 8, y + 17);
+    ctx.fillStyle = C.labelText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(slice.label, x0 + 8, cy + 12);
     ctx.font = font;
     flat.forEach((f, col) => {
       const x1 = x0 + labelW + col * colW;
@@ -2754,11 +2818,11 @@ async function exportPng() {
         } else { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + h / 2 + 4); }
       } else if (slice.key === SCREENSHOT_KEY) {
         const shots = (f.step.cells || {})[SCREENSHOT_KEY] || [];
-        if (shots.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
+        if (shots.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, cy + 13); }
         else {
           const availW = colW - 16;
           const plan = shotDrawPlan(shots, availW);
-          let dy = y + 7;
+          let dy = cy;
           shots.forEach((s, k) => {
             const { dw, dh } = plan.places[k];
             const dx = x1 + 8;
@@ -2775,19 +2839,56 @@ async function exportPng() {
             dy += dh + plan.gap;
           });
         }
+      } else if (slice.key === TOUCHPOINT_KEY) {
+        const list = f.step.cells[TOUCHPOINT_KEY] || [];
+        if (list.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, cy + 13); }
+        else {
+          const lines = pillPlan(list, colW - 16);
+          ctx.font = pillFont; ctx.textBaseline = 'middle';
+          let py = cy;
+          lines.forEach(line => {
+            let px = x1 + 8;
+            line.forEach(p => {
+              ctx.fillStyle = C.chip; rr(px, py, p.w, pillH, pillH / 2); ctx.fill();
+              ctx.fillStyle = C.chipText; ctx.fillText(p.label, px + pillPadX, py + pillH / 2 + 0.5);
+              px += p.w + pillGapX;
+            });
+            py += pillH + pillGapY;
+          });
+          ctx.textBaseline = 'alphabetic'; ctx.font = font;
+        }
+      } else if (QUOTE_KEYS.includes(slice.key)) {
+        const list = f.step.cells[slice.key] || [];
+        if (list.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, cy + 13); }
+        else {
+          let ky = cy;
+          list.forEach(el => {
+            const lines = wrapLines(el.text, colW - 16 - 2 * cardPad - quoteIndent) || [''];
+            const cardH = lines.length * lineH + 2 * cardPad;
+            const cardX = x1 + 8, cardW2 = colW - 16;
+            ctx.fillStyle = C.cell; rr(cardX, ky, cardW2, cardH, cardR); ctx.fill();
+            ctx.strokeStyle = C.border; rr(cardX + 0.5, ky + 0.5, cardW2 - 1, cardH - 1, cardR); ctx.stroke();
+            ctx.fillStyle = C.accent; ctx.font = quoteFont;
+            ctx.fillText('“', cardX + cardPad, ky + cardPad + 14);
+            ctx.fillStyle = C.text; ctx.font = font;
+            let ty = ky + cardPad + 13;
+            lines.forEach(ln => { ctx.fillText(ln, cardX + cardPad + quoteIndent, ty); ty += lineH; });
+            ky += cardH + cardGap;
+          });
+        }
       } else {
         const list = f.step.cells[slice.key] || [];
-        let ty = y + 16;
+        let ty = cy + 13;
         list.forEach(el => {
           const lines = wrapLines(elementText(el, slice.key), colW - 18) || [''];
           ctx.fillStyle = C.text;
           lines.forEach(ln => { ctx.fillText(ln, x1 + 8, ty); ty += lineH; });
-          ty += 2;
+          ty += 4;
         });
-        if (list.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, y + 17); }
+        if (list.length === 0) { ctx.fillStyle = C.labelText; ctx.fillText('—', x1 + 8, cy + 13); }
       }
     });
-    y += h;
+    y += h + rowGap;
   });
 
   canvas.toBlob(blob => {
