@@ -872,7 +872,7 @@ The exported map must read like a **poster**, not a dense table: generous spacin
 8. **Regression check**: export with a journey covering all row kinds (pills, cards, plain, emotion, screenshots) — no text clipping (heights match drawing), pills don't overlap, cards don't overlap; empty rows show "—"; hidden rows (Change 16) still excluded; brand theme + no brand theme; dark + light app theme; `fit` guard on a very tall journey; on-screen grid pixel-unchanged; JSON export/import untouched.
 
 ### Change 19 — feature: horizontal stage separation + flow arrows in the PNG export (2026-08-28)
-**Status**: planned — route to ux-build
+**Status**: built — static verification passed (node syntax check; all three column-x sites migrated to `colX`, no stale formulas); click-test pending
 
 **User goal**
 The export's horizontal sections must be visually separated too: a stage's group of steps should have a **break** (background gap) between it and the next stage's group — mirroring the vertical `rowGap` from Change 18. Steps may also be connected with **arrows** showing the journey's flow.

@@ -2668,6 +2668,12 @@ async function exportPng() {
   const cardPad = 12, cardGap = 8, cardR = 10, quoteIndent = 18;
   const quoteFont = 'bold 18px -apple-system,Segoe UI,sans-serif';
   const QUOTE_KEYS = ['insight', 'pain-point']; // rendered as quote cards
+  // horizontal stage separation (Change 19): a background gap between stage groups
+  const stageGap = 24;
+  const stageOrd = []; let so = -1;
+  flat.forEach((f, i) => { if (i === 0 || f.stage !== flat[i - 1].stage) so++; stageOrd[i] = so; });
+  const stageCount = so + 1;
+  const colX = (col) => x0 + labelW + col * colW + stageOrd[col] * stageGap;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
@@ -2696,6 +2702,17 @@ async function exportPng() {
     ctx.arcTo(x, y + h, x, y, rad);
     ctx.arcTo(x, y, x + w, y, rad);
     ctx.closePath();
+  }
+
+  // flow arrow (Change 19): shaft + chevron head centered at (cx, cy)
+  function drawArrow(cx, cy, size, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - size, cy + 0.5); ctx.lineTo(cx + size - 6, cy + 0.5);
+    ctx.moveTo(cx + size, cy + 0.5); ctx.lineTo(cx + size - 6, cy - 3.5);
+    ctx.moveTo(cx + size, cy + 0.5); ctx.lineTo(cx + size - 6, cy + 4.5);
+    ctx.stroke();
+    ctx.lineWidth = 1;
   }
 
   // touchpoint pills for one cell — greedy line-wrap of measured pill widths (pill font!)
@@ -2752,7 +2769,7 @@ async function exportPng() {
     return { slice, h: Math.max(minRowH, maxLines * lineH + rowPadY) };
   });
 
-  const totalW = pad * 2 + labelW + colW * flat.length;
+  const totalW = pad * 2 + labelW + colW * flat.length + stageGap * Math.max(0, stageCount - 1);
   const totalH = pad * 2 + headerH + stageBandH + stepHeaderH + sliceRows.reduce((a, r) => a + r.h + rowGap, 0) - rowGap;
   const dpr = window.devicePixelRatio || 1;
   const fit = Math.min(1, 30000 / totalW, 30000 / totalH); // canvas safety: browsers cap ~32,767px (Change 17)
@@ -2777,7 +2794,7 @@ async function exportPng() {
     const first = flat.findIndex(f => f.stage === st);
     const lasts = []; for (let i = 0; i < flat.length; i++) if (flat[i].stage === st) lasts.push(i);
     const last = lasts[lasts.length - 1];
-    const x1 = x0 + labelW + first * colW;
+    const x1 = colX(first);
     ctx.fillStyle = C.stageBg; ctx.fillRect(x1, y, (last - first + 1) * colW, stageBandH);
     ctx.fillStyle = C.stageText; ctx.font = 'bold 13px -apple-system,Segoe UI,sans-serif';
     ctx.fillText(st.name, x1 + 8, y + 18);
@@ -2786,12 +2803,22 @@ async function exportPng() {
   y += stageBandH;
 
   flat.forEach((f, col) => {
-    const x1 = x0 + labelW + col * colW;
+    const x1 = colX(col);
     ctx.fillStyle = C.panel; ctx.fillRect(x1, y, colW, stepHeaderH);
     ctx.strokeStyle = C.border; ctx.strokeRect(x1, y, colW, stepHeaderH);
     ctx.fillStyle = C.text; ctx.font = '600 13px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(trunc(ctx, f.step.name, colW - 16), x1 + 8, y + 25);
+    ctx.fillText(trunc(ctx, f.step.name, colW - (col < flat.length - 1 ? 26 : 16)), x1 + 8, y + 25);
   });
+  // flow arrows: chevrons within a stage (panel knockout), accent arrows across the stage gaps
+  for (let col = 0; col < flat.length - 1; col++) {
+    const cur = colX(col) + colW, next = colX(col + 1);
+    if (stageOrd[col + 1] === stageOrd[col]) {
+      ctx.fillStyle = C.panel; ctx.fillRect(cur - 8, y + 1, 16, stepHeaderH - 2);
+      drawArrow(cur, y + stepHeaderH / 2, 8, C.labelText);
+    } else {
+      drawArrow((cur + next) / 2, y + stepHeaderH / 2, 10, C.accent);
+    }
+  }
   ctx.fillStyle = C.panel2; ctx.fillRect(x0, y, labelW, stepHeaderH);
   ctx.strokeStyle = C.border; ctx.strokeRect(x0, y, labelW, stepHeaderH);
   ctx.fillStyle = C.labelText; ctx.font = 'bold 12px -apple-system,Segoe UI,sans-serif';
@@ -2807,7 +2834,7 @@ async function exportPng() {
     ctx.fillText(slice.label, x0 + 8, cy + 12);
     ctx.font = font;
     flat.forEach((f, col) => {
-      const x1 = x0 + labelW + col * colW;
+      const x1 = colX(col);
       ctx.fillStyle = C.cell; ctx.fillRect(x1, y, colW, h);
       ctx.strokeStyle = C.borderSoft; ctx.strokeRect(x1, y, colW, h);
       if (slice.key === EMOTION_KEY) {
