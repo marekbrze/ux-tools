@@ -3915,6 +3915,27 @@ async function importJourney(data) {
   state.activeJourney = cat.journeys.length - 1;
   save(); render();
 }
+// explicit `kind` wins; shape heuristics only for files without one.
+// A journey payload also carries `touchpoints`/`followups` snapshots, so the
+// journey shape is checked before the dictionary shapes.
+const IMPORT_KINDS = ['database', 'personas', 'themes', 'touchpoints', 'followups', 'journey'];
+function detectImportKind(data) {
+  if (!data || typeof data !== 'object') return null;
+  if (!Array.isArray(data) && IMPORT_KINDS.includes(data.kind)) return data.kind;
+  if (Array.isArray(data)) {
+    if (data.length === 0) return null;
+    if (data.every(t => t && typeof t === 'object' && typeof t.name === 'string')) return 'themes';
+    if (data.every(t => typeof t === 'string')) return 'touchpoints';
+    return null;
+  }
+  if (Array.isArray(data.categories)) return 'database';
+  if ((data.journey && typeof data.journey === 'object') || Array.isArray(data.stages)) return 'journey';
+  if (Array.isArray(data.personas)) return 'personas';
+  if (Array.isArray(data.themes)) return 'themes';
+  if (Array.isArray(data.touchpoints)) return 'touchpoints';
+  if (Array.isArray(data.followups)) return 'followups';
+  return null;
+}
 function importFromFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -3922,26 +3943,25 @@ function importFromFile(file) {
     let data;
     try { data = JSON.parse(e.target.result); } catch (err) { flashToast('✗ Invalid file'); return; }
     try {
-      if (data && (data.kind === 'database' || Array.isArray(data.categories))) {
+      const kind = detectImportKind(data);
+      if (kind === 'database') {
         if (!confirm('Replace ALL data with this imported file? This cannot be undone.')) { flashToast('Import cancelled'); return; }
         await importDatabase(data);
         const nj = state.categories.reduce((a, c) => a + (c.journeys?.length || 0), 0);
         flashToast(`✓ Imported (${nj} journeys)`);
-      } else if (data && (data.kind === 'personas' || Array.isArray(data.personas))) {
+      } else if (kind === 'personas') {
         const r = importPersonas(data);
         flashToast(`✓ Personas imported (${r.added} added, ${r.updated} updated)`);
-      } else if (data && (data.kind === 'themes' || Array.isArray(data.themes) ||
-                 (Array.isArray(data) && data.length > 0 && data.every(t => t && typeof t === 'object' && typeof t.name === 'string')))) {
+      } else if (kind === 'themes') {
         const r = importBrandThemes(data);
         flashToast(`✓ Themes imported (${r.added} added, ${r.updated} updated)`);
-      } else if (data && (data.kind === 'touchpoints' || Array.isArray(data.touchpoints) ||
-                 (Array.isArray(data) && data.length > 0 && data.every(t => typeof t === 'string')))) {
+      } else if (kind === 'touchpoints') {
         const r = importTouchpoints(data);
         flashToast(`✓ Touchpoints imported (${r.added} added, ${r.exists} exist)`);
-      } else if (data && (data.kind === 'followups' || Array.isArray(data.followups))) {
+      } else if (kind === 'followups') {
         const r = importFollowups(data);
         flashToast(`✓ Follow-up channels imported (${r.added} added, ${r.exists} exist)`);
-      } else if (data && (data.kind === 'journey' || data.journey || Array.isArray(data.stages))) {
+      } else if (kind === 'journey') {
         await importJourney(data);
         flashToast('✓ Journey imported');
       } else {

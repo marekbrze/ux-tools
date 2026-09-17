@@ -972,3 +972,14 @@ Users must be able to add personas and brand themes with **full freedom**, from 
 9. **Import tolerance (D)** — `importFromFile` (`index.html:3397`): personas branch becomes `data.kind === 'personas' || Array.isArray(data.personas)` (keep `Array.isArray` check inside `importPersonas` as the real guard). Position in the chain unchanged (after database, before themes — a `personas` key matches no other branch).
 10. **CSS** (tokens only): `.pe-input`, `.pe-area`, `.pe-field`, `.pe-footer` (persona editor); `.te-role-row`, `.te-swatch`, `.te-hex`, `.te-clear`, `.te-preview`, `.te-pv-stage`, `.te-pv-step`, `.te-pv-label`, `.te-pv-cell`, `.te-pv-pill` (theme editor + preview). Real `<button>`s with `aria-label`s, `:focus-visible` rings, both app themes AA (editor chrome uses app tokens; preview colors are the user's brand values by design).
 11. **Regression check**: Create/Expand prompt tabs byte-identical to Change 15 (labels may differ, content not); persona dblclick rename still works; journey-meta persona select + ⓘ unchanged; themes list apply-on-click + hover × unchanged; PNG export and `applyBrandThemeToGrid` untouched (editor only writes data); personas/themes JSON imports (both with and without `kind`) land correctly; database export/import round-trips editor-created content (plain data); boot seed untouched.
+
+### Change 22 — bug: journey JSON import routed to the touchpoints importer (2026-09-17)
+**Status**: built — verified in headless Chromium (import of `business/leasing/journeys/le-3-happy-path-samochod-osobowy.json`: toast "✓ Journey imported", 7 stages / 19 steps, persona Paweł, touchpoint + follow-up refs remapped, no console errors)
+
+**Repro**: ↥ Import a `kind: "journey"` file that has a top-level `touchpoints` array (every journey exported since Change 14, and AI-generated journeys following the Change 15 contract) → toast "✓ Touchpoints imported (0 added, 1 exist)", no journey added.
+
+**Root cause**: `importFromFile()` checked the branches in order and matched on shape before `kind` — the touchpoints branch (`data.kind === 'touchpoints' || Array.isArray(data.touchpoints)`) sits before the journey branch, and `buildJourneyPayload()` adds a `touchpoints` dictionary snapshot to every journey payload (Change 14). Class: logic error (regression from Change 14).
+
+**Fix**: new `detectImportKind(data)` — an explicit known `kind` always wins; shape heuristics only for files without `kind`, with the journey shape (`journey` object / `stages` array) checked before the dictionary shapes (`personas` / `themes` / `touchpoints` / `followups`). `importFromFile()` dispatches on its result; toasts unchanged.
+
+**Regression scope**: database / personas / themes / touchpoints / follow-ups imports (with and without `kind`, bare string and `{name}` arrays) resolve to the same branches as before — checked via `detectImportKind` on each shape.
